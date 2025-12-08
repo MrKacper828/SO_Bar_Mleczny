@@ -3,9 +3,11 @@
 #ifndef PROCESY_H
 #define PROCESY_H
 
-void procesKlient();
+void procesKlient(int liczba_osob);
 
 void procesKasjer();
+
+void procesPracownik();
 
 void procesKierownik();
 

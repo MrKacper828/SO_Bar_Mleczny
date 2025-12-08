@@ -4,12 +4,17 @@
 #include "operacje.h"
 #include "struktury.h"
 
-void procesKlient() {
+void procesKlient(int liczba_osob) {
 
 
 }
 
 void procesKasjer() {
+
+
+}
+
+void procesPracownik() {
 
 
 }

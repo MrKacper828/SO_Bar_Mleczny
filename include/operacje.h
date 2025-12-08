@@ -1,16 +1,15 @@
-//operacje.h - struktury na funkcje systemowe
+//operacje.h - wrappery
 
 #ifndef OPERACJE_H
 #define OPERACJE_H
 
-struct Semaphore
-{
-    
+class Semaphore {
+    int sem_id;
+public:
+    void usun();
 };
 
-struct SharedMemory
-{
-    
-};
+int alokujPamiec();
+void zwolnijPamiec();
 
 #endif

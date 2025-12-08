@@ -5,3 +5,13 @@
 
 //definicje z operacje.h żeby opakować funkcje systemowe
 //obsługa błędów perror w tym pliku
+
+int alokujPamiec() {
+
+    return 0;
+}
+
+void zwolnijPamiec() {
+
+
+}
