@@ -1,18 +1,18 @@
-CC = g++
+CXX = g++
 
-CFLAGS = -Wall -std=c++17 -Iinclude -pthread
+CXXFLAGS = -Wall -std=c++11 -Iinclude -pthread
 
 SOURCES = src/main.cpp src/operacje.cpp src/procesy.cpp src/logger.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
-EXECUTABLE = bar_mleczny
+TARGET = bar_mleczny
 
-all: $(EXECUTABLE)
+all: $(TARGET)
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $(EXECUTABLE) -lrt
+$(TARGET): $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $(TARGET) -lrt
 
-.cpp.o:
-	$(CC) $(CFLAGS) -c $< -o $@
+%.O: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f src/*.o $(EXECUTABLE)
+	rm -f src/*.o $(TARGET)

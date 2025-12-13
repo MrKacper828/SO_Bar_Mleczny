@@ -7,18 +7,15 @@
 //definicje kluczy
 //struktury wiadomości do kolejek komunikatów
 
-struct Stolik
-{
+struct Stolik {
     
 };
 
-struct PamiecDzielona
-{
+struct PamiecDzielona {
     
 };
 
-struct Komunikat
-{
+struct Komunikat {
     
 };
 

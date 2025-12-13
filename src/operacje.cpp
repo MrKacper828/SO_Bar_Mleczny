@@ -3,15 +3,32 @@
 #include "operacje.h"
 #include "struktury.h"
 
-//definicje z operacje.h żeby opakować funkcje systemowe
+//definicje z operacje.h
 //obsługa błędów perror w tym pliku
 
-int alokujPamiec() {
+//semafor
+int utworzSemafor() {
+    return 0;
+}
 
+void usunSemafor() {
+
+}
+
+//pamięć dzielona
+int alokujPamiec() {
     return 0;
 }
 
 void zwolnijPamiec() {
 
+}
+
+//kolejki
+int utworzKolejke() {
+    return 0;
+}
+
+void usunKolejke() {
 
 }

@@ -1,15 +1,18 @@
-//operacje.h - wrappery
+//operacje.h - funkcje semaforów, pamieci dzielonej i kolejek
 
 #ifndef OPERACJE_H
 #define OPERACJE_H
 
-class Semaphore {
-    int sem_id;
-public:
-    void usun();
-};
+//semafor
+int utworzSemafor();
+void usunSemafor();
 
+//pamięć dzielona
 int alokujPamiec();
 void zwolnijPamiec();
+
+//kolejki
+int utworzKolejke();
+void usunKolejke();
 
 #endif
