@@ -6,20 +6,16 @@
 
 void procesKlient(int liczba_osob) {
 
-
 }
 
 void procesKasjer() {
-
 
 }
 
 void procesPracownik() {
 
-
 }
 
 void procesKierownik() {
-
 
 }
