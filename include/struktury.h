@@ -10,8 +10,8 @@
 //struktury wiadomości do kolejek komunikatów
 
 //klucze 
-const int KLUCZ_PD = 123;
-const int KLUCZ_SEM = 234;
+key_t KLUCZ_PD = ftok(".", 'P'); //klucz dla pamięci dzielonej
+key_t KLUCZ_SEM = ftok(".", 'S'); //klucz dla semafora
 
 struct Stolik {
     int id;
