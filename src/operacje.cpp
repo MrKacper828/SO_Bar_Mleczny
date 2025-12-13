@@ -13,9 +13,19 @@
 //definicje z operacje.h
 //obsługa błędów perror w tym pliku
 
+key_t stworzKlucz(int klucz_struktury) {
+    key_t klucz = ftok(KLUCZ_SCIEZKA, klucz_struktury);
+    if (klucz == -1) {
+        perror("Błąd wczytania klucza(ftok)");
+        exit(1);
+    }
+    return klucz;
+}
+
 //semafor
 int utworzSemafor() {
-    int sem_id = semget(KLUCZ_SEM, 1, IPC_CREAT | 0666);
+    key_t klucz = stworzKlucz(KLUCZ_SEM);
+    int sem_id = semget(klucz, 1, IPC_CREAT | 0666);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
@@ -60,7 +70,7 @@ int alokujPamiec() {
     return 0;
 }
 
-void zwolnijPamiec() {
+void zwolnijPamiec(int shm_id) {
 
 }
 

@@ -9,9 +9,10 @@
 //definicje kluczy
 //struktury wiadomości do kolejek komunikatów
 
-//klucze 
-key_t KLUCZ_PD = ftok(".", 'P'); //klucz dla pamięci dzielonej
-key_t KLUCZ_SEM = ftok(".", 'S'); //klucz dla semafora
+//klucze
+#define KLUCZ_SCIEZKA "."
+const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
+const int KLUCZ_SEM = 'S'; //klucz dla semafora
 
 struct Stolik {
     int id;

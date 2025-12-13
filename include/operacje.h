@@ -5,6 +5,7 @@
 
 #include "struktury.h"
 
+key_t stworzKlucz(int klucz_struktury);
 //semafor
 int utworzSemafor();
 void usunSemafor(int sem_id);
@@ -13,7 +14,7 @@ void semaforOpusc(int sem_id); //P
 
 //pamięć dzielona
 int alokujPamiec();
-void zwolnijPamiec();
+void zwolnijPamiec(int shm_id);
 
 //kolejki
 int utworzKolejke();

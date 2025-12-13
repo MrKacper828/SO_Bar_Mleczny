@@ -2,17 +2,28 @@ CXX = g++
 
 CXXFLAGS = -Wall -std=c++11 -Iinclude -pthread
 
-SOURCES = src/main.cpp src/operacje.cpp src/procesy.cpp src/logger.cpp
-OBJECTS = $(SOURCES:.cpp=.o)
-TARGET = bar_mleczny
+OBJECTS = src/operacje.o src/procesy.o src/logger.o
+TARGETS = main klient kasjer pracownik kierownik
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): $(OBJECTS)
-	$(CXX) $(OBJECTS) -o $(TARGET) -lrt
+main: src/main.o $(OBJECTS)
+	$(CXX) src/main.o $(OBJECTS) -o main -lrt
 
-%.O: %.cpp
+klient: src/klient.o $(OBJECTS)
+	$(CXX) src/klient.o $(OBJECTS) -o klient -lrt
+
+kasjer: src/kasjer.o $(OBJECTS)
+	$(CXX) src/kasjer.o $(OBJECTS) -o kasjer -lrt
+
+pracownik: src/pracownik.o $(OBJECTS)
+	$(CXX) src/pracownik.o $(OBJECTS) -o pracownik -lrt
+
+kierownik: src/kierownik.o $(OBJECTS)
+	$(CXX) src/kierownik.o $(OBJECTS) -o kierownik -lrt
+
+%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f src/*.o $(TARGET)
+	rm -f src/*.o $(TARGETS)
