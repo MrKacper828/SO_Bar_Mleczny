@@ -11,13 +11,17 @@ int utworzSemafor();
 void usunSemafor(int sem_id);
 void semaforPodnies(int sem_id); //V
 void semaforOpusc(int sem_id); //P
+int polaczSemafor();
 
 //pamięć dzielona
 int alokujPamiec();
-void zwolnijPamiec(int shm_id);
+void zwolnijPamiec(int pam_id);
+PamiecDzielona* dolaczPamiec();
+void odlaczPamiec(PamiecDzielona* adres);
 
 //kolejki
 int utworzKolejke();
-void usunKolejke();
+void usunKolejke(int kol_id);
+int polaczKolejke();
 
 #endif

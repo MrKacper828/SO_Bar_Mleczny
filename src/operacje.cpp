@@ -22,6 +22,7 @@ key_t stworzKlucz(int klucz_struktury) {
     return klucz;
 }
 
+
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
@@ -39,7 +40,7 @@ int utworzSemafor() {
 }
 
 void usunSemafor(int sem_id) {
-    if (semctl(sem_id, 0, IPC_RMID) == -1) {
+    if (semctl(sem_id, 0, IPC_RMID, NULL) == -1) {
         perror("Nieudane usuniecie semafora(semctl IPC_RMID)");
     }
 }
@@ -54,6 +55,7 @@ void semaforPodnies(int sem_id) { //V
         perror("Błąd poniesienia semafora(semop 1)");
     }
 }
+
 void semaforOpusc(int sem_id) { //P
     struct sembuf operacje;
     operacje.sem_num = 0;
@@ -65,20 +67,79 @@ void semaforOpusc(int sem_id) { //P
     }
 }
 
+int polaczSemafor() {
+    key_t klucz = stworzKlucz(KLUCZ_SEM);
+    int sem_id = semget(klucz, 0, 0666);
+    if (sem_id == -1) {
+        perror("Błąd połączenia semafora(semget)");
+        exit(1);
+    }
+    return sem_id;
+}
+
+
 //pamięć dzielona
 int alokujPamiec() {
-    return 0;
+    key_t klucz = stworzKlucz(KLUCZ_PD);
+    int pam_id = shmget(klucz, sizeof(PamiecDzielona), IPC_CREAT | 0666);
+    if (pam_id == -1) {
+        perror("Błąd tworzenia pamięci dzielonej(shmget IPC_CREAT)");
+        exit(1);
+    }
+    return pam_id;
 }
 
-void zwolnijPamiec(int shm_id) {
-
+void zwolnijPamiec(int pam_id) {
+    if (shmctl(pam_id, IPC_RMID, NULL) == -1) {
+        perror("Nieudane usuniecie pamięci dzielonej(shmctl IPC_RMID)");
+    }
 }
+
+PamiecDzielona* dolaczPamiec() {
+    key_t klucz = stworzKlucz(KLUCZ_PD);
+    int pam_id = shmget(klucz, sizeof(PamiecDzielona), 0666);
+    if (pam_id == -1) {
+        perror("Błąd połączenia pamięci dzielonej(shmget)");
+        exit(1);
+    }
+    void* pam = shmat(pam_id, NULL, 0);
+    if (pam == (void*)-1) {
+        perror("Błąd łączenia(shmat)");
+        exit(1);
+    }
+    return (PamiecDzielona*)pam;
+}
+
+void odlaczPamiec(PamiecDzielona* adres) {
+    if (shmdt(adres) == -1) {
+        perror("Nieudane odłączenie pamięci dzielonej(shmdt)");
+    }
+}
+
 
 //kolejki
 int utworzKolejke() {
-    return 0;
+    key_t klucz = stworzKlucz(KLUCZ_KOL);
+    int kol_id = msgget(klucz, IPC_CREAT | 0666);
+    if (kol_id == -1) {
+        perror("Błąd tworzenia kolejki(msgget IPC_CREAT)");
+        exit(1);
+    }
+    return kol_id;
 }
 
-void usunKolejke() {
+void usunKolejke(int kol_id) {
+    if (msgctl(kol_id, IPC_RMID, NULL) == -1) {
+        perror("Nieudane usuniecie kolejki(msgctl IPC_RMID)");
+    }
+}
 
+int polaczKolejke() {
+    key_t klucz = stworzKlucz(KLUCZ_KOL);
+    int kol_id = msgget(klucz, 0666);
+    if (kol_id == -1) {
+        perror("Błąd połączenia kolejki(msgget)");
+        exit(1);
+    }
+    return kol_id;
 }
