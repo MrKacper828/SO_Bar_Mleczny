@@ -15,29 +15,30 @@ const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
 const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
-const int MAX_STOLIKOW = 100;
-
-struct Stolik {
-    int id;
-    int pojemnosc;
-    int ile_siedzi;
-    int rozmiar_grupy;
-    bool rezerwacja;
-};
+//ilość stolików w restauracji
+const int STOLIKI_X1 = 4;
+const int STOLIKI_X2 = 4;
+const int STOLIKI_X3 = 2;
+const int STOLIKI_X4 = 2;
 
 struct PamiecDzielona {
-    Stolik stoliki[MAX_STOLIKOW];
-    int liczba_stolikow;
+    int wolne_x1;
+    int wolne_x2;
+    int wolne_x3;
+    int wolne_x4;
 
     bool pozar;
     bool podwojenie_X3;
     pid_t pid_pracownika;
+    pid_t pid_kasjera;
 };
 
+//dla msgsnd
 struct Komunikat {
     long mtype; //typ grupy (1, 2, 3, 4)
-    pid_t pid_grupy;
+    pid_t nadawca;
+    int kod;
 };
-
+const int ROZMIAR_KOM = sizeof(Komunikat) - sizeof(long);
 
 #endif

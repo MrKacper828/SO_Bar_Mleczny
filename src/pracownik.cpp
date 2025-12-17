@@ -1,4 +1,4 @@
-//pracownik.cpp - plik do wykonywania pracownika
+//pracownik.cpp - proces pracownika
 
 int main() {
     return 0;

@@ -1,4 +1,4 @@
-//kasjer.cpp - plik do wykonywania kasjera
+//kasjer.cpp - proces kasjera
 
 int main() {
     return 0;

@@ -1,4 +1,4 @@
-//kierownik.cpp - plik do wykonywania kierownika
+//kierownik.cpp - proces kierownika
 
 int main() {
     return 0;

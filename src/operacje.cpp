@@ -116,6 +116,16 @@ void odlaczPamiec(PamiecDzielona* adres) {
     }
 }
 
+int polaczPamiec() {
+    key_t klucz = stworzKlucz(KLUCZ_PD);
+    int kol_id = shmget(klucz, sizeof(PamiecDzielona), 0666);
+    if (kol_id == -1) {
+        perror("Błąd połączenia pamięci dzielonej(shmget)");
+        exit(1);
+    }
+    return kol_id;
+}
+
 
 //kolejki
 int utworzKolejke() {

@@ -1,4 +1,4 @@
-//klient.cpp - plik do wykonywania klienta
+//klient.cpp - proces klienta
 
 int main() {
     return 0;

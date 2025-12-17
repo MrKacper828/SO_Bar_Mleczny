@@ -18,6 +18,7 @@ int alokujPamiec();
 void zwolnijPamiec(int pam_id);
 PamiecDzielona* dolaczPamiec();
 void odlaczPamiec(PamiecDzielona* adres);
+int polaczPamiec();
 
 //kolejki
 int utworzKolejke();
