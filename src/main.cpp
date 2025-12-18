@@ -30,6 +30,8 @@ int main() {
     signal(SIGINT, zakonczenie);
     srand(time(NULL));
 
+    tabula_rasa();
+
     sem_id = utworzSemafor();
     pam_id = alokujPamiec();
     kol_id = utworzKolejke();
@@ -43,7 +45,33 @@ int main() {
     pam->podwojenie_X3 = false;
 
     std::cout << "Utworzono zasoby" << std::endl;
-    sleep(10);
+    
+    pid_t pid;
+
+    //kasjer
+    pid = fork();
+    if (pid == 0) {
+        execl("./kasjer", "kasjer", NULL);
+        perror("Błąd execl kasjer");
+        exit(1);
+    }
+    else {
+        procesy_potomne.push_back(pid);
+    }
+
+    //klient
+    pid = fork();
+    if (pid == 0) {
+        execl("./klient", "klient", NULL);
+        perror("Błąd execl klient");
+        exit(1);
+    }
+    else {
+        procesy_potomne.push_back(pid);
+    }
+
+    std::cout << "Symulacja działa" << std::endl;
+    sleep(5);
 
     zakonczenie(0);
     return 0;

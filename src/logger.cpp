@@ -10,7 +10,7 @@
 const std::string LOGI_PLIK = "logi_bar_mleczny.txt";
 
 //kto, co - wypis na ekran i do pliku
-void log(std::string wiadomosc) {
+void logger(std::string wiadomosc) {
     pid_t pid = getpid();
     std::string log = std::to_string(pid) + "): " + wiadomosc;
     std::cout << log << std::endl;

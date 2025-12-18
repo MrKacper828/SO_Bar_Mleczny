@@ -147,3 +147,26 @@ int polaczKolejke() {
     }
     return kol_id;
 }
+
+//komunikaty
+void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int kod) {
+    Komunikat kom;
+    kom.mtype = mtyp;
+    kom.nadawca = nadawca;
+    kom.kod = kod;
+    if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+        perror("Nieudana próba wysłania wiadomości(msgsnd)");
+    }
+}
+
+bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj) {
+    int flaga = 0;
+    if (!czekaj) {
+        flaga = IPC_NOWAIT;
+    }
+
+    if (msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga) != -1) {
+        return true;
+    }
+    return false;
+}
