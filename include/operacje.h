@@ -16,7 +16,7 @@ int polaczSemafor();
 //pamięć dzielona
 int alokujPamiec();
 void zwolnijPamiec(int pam_id);
-PamiecDzielona* dolaczPamiec();
+PamiecDzielona* dolaczPamiec(int pam_id);
 void odlaczPamiec(PamiecDzielona* adres);
 int polaczPamiec();
 

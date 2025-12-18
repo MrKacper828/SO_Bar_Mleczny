@@ -95,13 +95,7 @@ void zwolnijPamiec(int pam_id) {
     }
 }
 
-PamiecDzielona* dolaczPamiec() {
-    key_t klucz = stworzKlucz(KLUCZ_PD);
-    int pam_id = shmget(klucz, sizeof(PamiecDzielona), 0666);
-    if (pam_id == -1) {
-        perror("Błąd połączenia pamięci dzielonej(shmget)");
-        exit(1);
-    }
+PamiecDzielona* dolaczPamiec(int pam_id) {
     void* pam = shmat(pam_id, NULL, 0);
     if (pam == (void*)-1) {
         perror("Błąd łączenia(shmat)");
