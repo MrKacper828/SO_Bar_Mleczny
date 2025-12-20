@@ -13,7 +13,8 @@ int main() {
     Komunikat kom;
     while (true) {
         if (odbierzKomunikat(kol_id, 0, &kom, true)) {
-            std::string log = "Kasjer: mam klienta - PID: " + std::to_string(kom.nadawca);
+            std::string log = "Kasjer: mam klienta - PID: " + std::to_string(kom.nadawca) +
+                                " grupa " + std::to_string(kom.kod) + " osobowa";
             logger(log);
         }
     }

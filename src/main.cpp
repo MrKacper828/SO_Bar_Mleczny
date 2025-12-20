@@ -3,7 +3,9 @@
 #include <iostream>
 #include <vector>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <signal.h>
+#include <unistd.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -70,8 +72,27 @@ int main() {
         procesy_potomne.push_back(pid);
     }
 
-    std::cout << "Symulacja działa" << std::endl;
-    sleep(5);
+    //klienci
+    int liczba_klientow = 15;
+    while (liczba_klientow > 0) {
+        int wielkosc_grupy = (rand() % 4) + 1;
+        std::string wielkosc = std::to_string(wielkosc_grupy);
+
+        pid = fork();
+        if (pid == 0) {
+            execl("./klient", "klient", wielkosc.c_str(), NULL);
+            perror("Błąd execl klient");
+            exit(1);
+        }
+        else {
+            procesy_potomne.push_back(pid);
+        }
+        usleep(500000 + (rand() % 1000000));
+        liczba_klientow--;
+    }
+
+    std::cout << "Symulacja koniec" << std::endl;
+    while (wait(NULL) > 0);
 
     zakonczenie(0);
     return 0;
