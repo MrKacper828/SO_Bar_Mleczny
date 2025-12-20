@@ -61,16 +61,6 @@ int main() {
         procesy_potomne.push_back(pid);
     }
 
-    //klient
-    pid = fork();
-    if (pid == 0) {
-        execl("./klient", "klient", NULL);
-        perror("Błąd execl klient");
-        exit(1);
-    }
-    else {
-        procesy_potomne.push_back(pid);
-    }
 
     //klienci
     int liczba_klientow = 15;

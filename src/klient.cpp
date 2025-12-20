@@ -22,13 +22,13 @@ int main(int argc, char* argv[]) {
 
     //oglądacze
     if ((rand() % 100) < 5) {
-        std::string log = "Klient: "+ std::to_string(wielkosc_grupy) + " osób tylko ogląda i wychodzi";
+        std::string log = "Klient: "+ std::to_string(wielkosc_grupy) + " osoba/y tylko ogląda i wychodzi";
         logger(log);
         odlaczPamiec(pam);
         return 0;
     }
 
-    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + "osób");
+    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + "osoba/y");
     wyslijKomunikat(kol_id, 1, getpid(), wielkosc_grupy);
 
     odlaczPamiec(pam);
