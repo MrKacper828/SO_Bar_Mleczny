@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     }
 
     //jedzenie
-    usleep(1000000 + (rand() % 2000000));
+    usleep(2000000 + (rand() % 2000000));
 
     //oddanie stolika
     semaforOpusc(sem_id);
