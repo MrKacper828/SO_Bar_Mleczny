@@ -149,11 +149,13 @@ int polaczKolejke() {
 }
 
 //komunikaty
-void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int kod) {
+void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika) {
     Komunikat kom;
     kom.mtype = mtyp;
     kom.nadawca = nadawca;
-    kom.kod = kod;
+    kom.dane = dane;
+    kom.typ_stolika = typ_stolika;
+    kom.id_stolika = id_stolika;
     if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
     }

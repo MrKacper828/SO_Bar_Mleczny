@@ -14,7 +14,8 @@ int sem_id, kol_id, pam_id;
 std::vector<pid_t> procesy_potomne;
 
 void zakonczenie(int sig) {
-    std::cout << "Zakończenie symulacji" << std::endl;
+    std::string zakonczenie = "Zakończenie symulacji";
+    logger(zakonczenie);
 
     for (pid_t pid : procesy_potomne) {
         kill(pid, SIGKILL);
@@ -24,7 +25,8 @@ void zakonczenie(int sig) {
     usunKolejke(kol_id);
     zwolnijPamiec(pam_id);
 
-    std::cout << "Wszystko zwolnione, koniec symulacji" << std::endl;
+    std::string koniec = "Wszystko zwolnione, koniec symulacji";
+    logger(koniec);
     exit(0);
 }
 
@@ -39,14 +41,38 @@ int main() {
     kol_id = utworzKolejke();
 
     PamiecDzielona* pam = dolaczPamiec(pam_id);
-    pam->wolne_x1 = STOLIKI_X1;
-    pam->wolne_x2 = STOLIKI_X2;
-    pam->wolne_x3 = STOLIKI_X3;
-    pam->wolne_x4 = STOLIKI_X4;
+    
+    for (int i = 0; i < STOLIKI_X1; i++) {
+        pam->stoliki_x1[i].id = i + 1;
+        pam->stoliki_x1[i].pojemnosc_max = 1;
+        pam->stoliki_x1[i].ile_zajetych_miejsc = 0;
+        pam->stoliki_x1[i].wielkosc_grupy_siedzacej = 0;
+    }
+    for (int i = 0; i < STOLIKI_X2; i++) {
+        pam->stoliki_x2[i].id = i + 1;
+        pam->stoliki_x2[i].pojemnosc_max = 2;
+        pam->stoliki_x2[i].ile_zajetych_miejsc = 0;
+        pam->stoliki_x2[i].wielkosc_grupy_siedzacej = 0;
+    }
+    for (int i = 0; i < STOLIKI_X3; i++) {
+        pam->stoliki_x3[i].id = i + 1;
+        pam->stoliki_x3[i].pojemnosc_max = 3;
+        pam->stoliki_x3[i].ile_zajetych_miejsc = 0;
+        pam->stoliki_x3[i].wielkosc_grupy_siedzacej = 0;
+    }
+    for (int i = 0; i < STOLIKI_X4; i++) {
+        pam->stoliki_x4[i].id = i + 1;
+        pam->stoliki_x4[i].pojemnosc_max = 4;
+        pam->stoliki_x4[i].ile_zajetych_miejsc = 0;
+        pam->stoliki_x4[i].wielkosc_grupy_siedzacej = 0;
+    }
+
     pam->pozar = false;
     pam->podwojenie_X3 = false;
+    odlaczPamiec(pam);
 
-    std::cout << "Utworzono zasoby" << std::endl;
+    std::string zasoby = "Utworzono zasoby";
+    logger(zasoby);
     
     pid_t pid;
 
@@ -61,7 +87,18 @@ int main() {
         procesy_potomne.push_back(pid);
     }
 
+    //pracownik
+    pid = fork();
+    if (pid == 0) {
+        execl("./pracownik", "pracownik", NULL);
+        perror("Błąd execl pracownik");
+        exit(1);
+    }
+    else {
+        procesy_potomne.push_back(pid);
+    }
 
+    sleep(1);
     //klienci
     int liczba_klientow = 15;
     while (liczba_klientow > 0) {
@@ -81,8 +118,15 @@ int main() {
         liczba_klientow--;
     }
 
-    std::cout << "Symulacja koniec" << std::endl;
-    while (wait(NULL) > 0);
+    for (int i = 0; i < liczba_klientow; i++) {
+        wait(NULL);
+    }
+    sleep(5);
+    std::string sym_koniec = "Wszyscy klienci obsłużeni symulacja koniec";
+    logger(sym_koniec);
+    while (true) {
+        sleep(1);
+    }
 
     zakonczenie(0);
     return 0;
