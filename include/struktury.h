@@ -16,28 +16,37 @@ const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
 //ilość stolików w restauracji
-const int STOLIKI_X1 = 4;
-const int STOLIKI_X2 = 4;
-const int STOLIKI_X3 = 2;
-const int STOLIKI_X4 = 2;
+const int STOLIKI_X1 = 2;
+const int STOLIKI_X2 = 2;
+const int STOLIKI_X3 = 1;
+const int STOLIKI_X4 = 1;
+
+struct Stolik { 
+    int id;
+    int pojemnosc_max;
+    int ile_zajetych_miejsc;
+    int wielkosc_grupy_siedzacej;
+};
+
 
 struct PamiecDzielona {
-    int wolne_x1;
-    int wolne_x2;
-    int wolne_x3;
-    int wolne_x4;
+    Stolik stoliki_x1[STOLIKI_X1];
+    Stolik stoliki_x2[STOLIKI_X2];
+    Stolik stoliki_x3[STOLIKI_X3];
+    Stolik stoliki_x4[STOLIKI_X4];
 
     bool pozar;
     bool podwojenie_X3;
-    pid_t pid_pracownika;
-    pid_t pid_kasjera;
 };
 
 //dla msgsnd
 struct Komunikat {
-    long mtype; //typ grupy (1, 2, 3, 4)
+    long mtype;
     pid_t nadawca;
-    int kod;
+    int dane;
+
+    int id_stolika;
+    int typ_stolika;
 };
 const int ROZMIAR_KOM = sizeof(Komunikat) - sizeof(long);
 
