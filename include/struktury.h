@@ -16,10 +16,10 @@ const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
 //ilość stolików w restauracji
-const int STOLIKI_X1 = 2;
-const int STOLIKI_X2 = 2;
-const int STOLIKI_X3 = 1;
-const int STOLIKI_X4 = 1;
+const int STOLIKI_X1 = 4;
+const int STOLIKI_X2 = 6;
+const int STOLIKI_X3 = 4;
+const int STOLIKI_X4 = 8;
 
 struct Stolik { 
     int id;

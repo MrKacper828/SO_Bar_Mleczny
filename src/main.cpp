@@ -100,7 +100,7 @@ int main() {
 
     sleep(1);
     //klienci
-    int liczba_klientow = 15;
+    int liczba_klientow = 80;
     while (liczba_klientow > 0) {
         int wielkosc_grupy = (rand() % 4) + 1;
         std::string wielkosc = std::to_string(wielkosc_grupy);
