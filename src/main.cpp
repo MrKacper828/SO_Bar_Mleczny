@@ -98,11 +98,14 @@ int main() {
         procesy_potomne.push_back(pid);
     }
 
+    //kierownik odpalany w osobnej konsoli manualnie dla przejrzystości
+
     sleep(1);
     //klienci
-    int liczba_klientow = 80;
+    int liczba_klientow = 100;
     while (liczba_klientow > 0) {
         int wielkosc_grupy = (rand() % 4) + 1;
+        //int wielkosc_grupy = 1;
         std::string wielkosc = std::to_string(wielkosc_grupy);
 
         pid = fork();
@@ -121,7 +124,7 @@ int main() {
     for (int i = 0; i < liczba_klientow; i++) {
         wait(NULL);
     }
-    sleep(5);
+    sleep(liczba_klientow);
     std::string sym_koniec = "Wszyscy klienci obsłużeni symulacja koniec";
     logger(sym_koniec);
     while (true) {

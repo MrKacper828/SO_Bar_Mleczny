@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     }
 
     logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y");
-    wyslijKomunikat(kol_id, 1, getpid(), wielkosc_grupy, 0, 0);
+    wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0);
 
     int aktualny_id_stolika = -1;
     int aktualny_typ_stolika = 0;
@@ -39,13 +39,13 @@ int main(int argc, char* argv[]) {
     if (odbierzKomunikat(kol_id, getpid(), &odp, true)) {
         aktualny_id_stolika = odp.id_stolika;
         aktualny_typ_stolika = odp.typ_stolika;
-        std::string log = "Klient: " + std::to_string(getpid()) + " dostałem stolik: " + std::to_string(aktualny_id_stolika) +
+        std::string log = "Klient: " + std::to_string(getpid()) + " dostałem jedzenie i stolik: " + std::to_string(aktualny_id_stolika) +
                             " typ: " + std::to_string(aktualny_typ_stolika);
         logger(log);
     }
 
     //jedzenie
-    usleep(2000000 + (rand() % 2000000));
+    usleep(8000000 + (rand() % 5000000));
 
     //oddanie stolika
     semaforOpusc(sem_id);
@@ -69,8 +69,9 @@ int main(int argc, char* argv[]) {
             if (s->ile_zajetych_miejsc == 0) {
                 s->wielkosc_grupy_siedzacej = 0;
             }
-            std::string log = "Klient: " + std::to_string(getpid()) + " zwalniam miejsce i wychodzę";
+            std::string log = "Klient: " + std::to_string(getpid()) + " oddaję naczynia zwalniam miejsce i wychodzę";
             logger(log);
+            usleep(1000000);
         }
     }
 

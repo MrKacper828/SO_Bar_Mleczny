@@ -16,10 +16,10 @@ const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
 //ilość stolików w restauracji
-const int STOLIKI_X1 = 4;
-const int STOLIKI_X2 = 6;
-const int STOLIKI_X3 = 4;
-const int STOLIKI_X4 = 8;
+const int STOLIKI_X1 = 2;
+const int STOLIKI_X2 = 2;
+const int STOLIKI_X3 = 3;
+const int STOLIKI_X4 = 4;
 
 struct Stolik { 
     int id;
@@ -39,7 +39,9 @@ struct PamiecDzielona {
     bool podwojenie_X3;
 };
 
-//dla msgsnd
+//dla msg
+const long TYP_KLIENT_KOLEJKA = 1;
+const long TYP_PRACOWNIK = 2;
 struct Komunikat {
     long mtype;
     pid_t nadawca;
