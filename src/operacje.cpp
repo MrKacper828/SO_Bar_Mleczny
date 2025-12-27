@@ -1,4 +1,5 @@
-//operacje.cpp - funkcje systemowe z operacje.h i obsługa błędów perror
+//operacje.cpp - funkcje semaforów, pamięci dzielonej i kolejek komunikatów
+//                  z obsługą błędów perror
 
 #include "operacje.h"
 #include <sys/ipc.h>
@@ -8,10 +9,6 @@
 #include <errno.h>
 #include <cstdio>
 #include <cstdlib>
-
-
-//definicje z operacje.h
-//obsługa błędów perror w tym pliku
 
 key_t stworzKlucz(int klucz_struktury) {
     key_t klucz = ftok(KLUCZ_SCIEZKA, klucz_struktury);

@@ -1,13 +1,10 @@
-//struktury.h - struktury w pamięci dzielonej i kolejki
+//struktury.h - klucze i struktury
+//                  w pamięci dzielonej + komunikaty
 
 #ifndef STRUKTURY_H
 #define STRUKTURY_H
 
 #include <sys/types.h>
-
-//struktury w pamięci dzielonej
-//definicje kluczy
-//struktury wiadomości do kolejek komunikatów
 
 //klucze
 #define KLUCZ_SCIEZKA "."
@@ -15,10 +12,11 @@ const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
 const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
-//ilość stolików w restauracji
+//max ilość stolików w restauracji
 const int STOLIKI_X1 = 2;
 const int STOLIKI_X2 = 2;
-const int STOLIKI_X3 = 3;
+//inicjalizować 2x większą parzystą liczbę żeby dało się użyć komendy podwojenia
+const int STOLIKI_X3 = 6;
 const int STOLIKI_X4 = 4;
 
 struct Stolik { 
@@ -26,6 +24,7 @@ struct Stolik {
     int pojemnosc_max;
     int ile_zajetych_miejsc;
     int wielkosc_grupy_siedzacej;
+    bool zarezerwowany;
 };
 
 
@@ -37,6 +36,9 @@ struct PamiecDzielona {
 
     bool pozar;
     bool podwojenie_X3;
+    int aktualna_liczba_X3;
+
+    int liczba_klientow;
 };
 
 //dla msg

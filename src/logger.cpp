@@ -1,11 +1,9 @@
-//logger.cpp - wypisywanie logów
+//logger.cpp - tworzenie logów z symulacji
 
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
 #include "logger.h"
-
-//wypisywanie logów z symulacji na ekan i zapisywanie ich do pliku
 
 const std::string LOGI_PLIK = "logi_bar_mleczny.txt";
 

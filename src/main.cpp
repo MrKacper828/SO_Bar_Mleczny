@@ -1,4 +1,4 @@
-//main.cpp - główny plik programu
+//main.cpp - główny plik symulacji
 
 #include <iostream>
 #include <vector>
@@ -12,6 +12,8 @@
 
 int sem_id, kol_id, pam_id;
 std::vector<pid_t> procesy_potomne;
+pid_t kasjer_pid = 0;
+pid_t pracownik_pid = 0;
 
 void zakonczenie(int sig) {
     std::string zakonczenie = "Zakończenie symulacji";
@@ -19,6 +21,12 @@ void zakonczenie(int sig) {
 
     for (pid_t pid : procesy_potomne) {
         kill(pid, SIGKILL);
+    }
+    if (kasjer_pid > 0) {
+        kill(kasjer_pid, SIGKILL);
+    }
+    if (pracownik_pid > 0) {
+        kill(pracownik_pid, SIGKILL);
     }
 
     usunSemafor(sem_id);
@@ -47,29 +55,34 @@ int main() {
         pam->stoliki_x1[i].pojemnosc_max = 1;
         pam->stoliki_x1[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x1[i].wielkosc_grupy_siedzacej = 0;
+        pam->stoliki_x1[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X2; i++) {
         pam->stoliki_x2[i].id = i + 1;
         pam->stoliki_x2[i].pojemnosc_max = 2;
         pam->stoliki_x2[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x2[i].wielkosc_grupy_siedzacej = 0;
+        pam->stoliki_x2[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X3; i++) {
         pam->stoliki_x3[i].id = i + 1;
         pam->stoliki_x3[i].pojemnosc_max = 3;
         pam->stoliki_x3[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x3[i].wielkosc_grupy_siedzacej = 0;
+        pam->stoliki_x3[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X4; i++) {
         pam->stoliki_x4[i].id = i + 1;
         pam->stoliki_x4[i].pojemnosc_max = 4;
         pam->stoliki_x4[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x4[i].wielkosc_grupy_siedzacej = 0;
+        pam->stoliki_x4[i].zarezerwowany = false;
     }
 
     pam->pozar = false;
     pam->podwojenie_X3 = false;
-    odlaczPamiec(pam);
+    pam->aktualna_liczba_X3 = STOLIKI_X3 / 2;
+    pam->liczba_klientow = 0;
 
     std::string zasoby = "Utworzono zasoby";
     logger(zasoby);
@@ -84,7 +97,7 @@ int main() {
         exit(1);
     }
     else {
-        procesy_potomne.push_back(pid);
+        kasjer_pid = pid;
     }
 
     //pracownik
@@ -95,15 +108,20 @@ int main() {
         exit(1);
     }
     else {
-        procesy_potomne.push_back(pid);
+        pracownik_pid = pid;
     }
 
-    //kierownik odpalany w osobnej konsoli manualnie dla przejrzystości
+    //kierownik odpalany manualnie w osobnej konsoli do wydawania poleceń
 
     sleep(1);
     //klienci
     int liczba_klientow = 100;
     while (liczba_klientow > 0) {
+
+        if (pam->pozar) {
+            break;
+        }
+
         int wielkosc_grupy = (rand() % 4) + 1;
         //int wielkosc_grupy = 1;
         std::string wielkosc = std::to_string(wielkosc_grupy);
@@ -121,16 +139,20 @@ int main() {
         liczba_klientow--;
     }
 
-    for (int i = 0; i < liczba_klientow; i++) {
+    for (size_t i = 0; i < procesy_potomne.size(); i++) {
         wait(NULL);
     }
-    sleep(liczba_klientow);
-    std::string sym_koniec = "Wszyscy klienci obsłużeni symulacja koniec";
-    logger(sym_koniec);
-    while (true) {
-        sleep(1);
-    }
 
-    zakonczenie(0);
+    if (kasjer_pid > 0) {
+        waitpid(kasjer_pid, NULL, 0);
+    }
+    if (pracownik_pid > 0) {
+        waitpid(pracownik_pid, NULL, 0);
+    }
+    odlaczPamiec(pam);
+    usunSemafor(sem_id);
+    usunKolejke(kol_id);
+    zwolnijPamiec(pam_id);
+    logger("Symulacja zakończona");
     return 0;
 }

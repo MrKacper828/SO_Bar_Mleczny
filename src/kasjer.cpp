@@ -1,4 +1,4 @@
-//kasjer.cpp - proces kasjera
+//kasjer.cpp - proces i logika kasjera
 
 #include <iostream>
 #include <vector>
@@ -32,6 +32,21 @@ int main() {
                                 " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa";
             logger(log);
         }
+
+        if (pam->pozar) {
+            logger("Kasjer: Pożar! Ewakuacja klientów!");
+            while (true) {
+                semaforOpusc(sem_id);
+                int pozostalo = pam->liczba_klientow;
+                semaforPodnies(sem_id);
+                if (pozostalo <= 0) {
+                    break;
+                }
+                usleep(100000);
+            }
+            logger("Kasjer: Wszyscy klienci ewakuowani, zamykam kasę i uciekam");
+            break;
+        }
     
 
         if (!kolejka.empty()) {
@@ -42,13 +57,15 @@ int main() {
                 int przypisany_typ = 0;
 
                 Stolik *tablica = nullptr;
+                int aktualna_liczba = 0;
                 
                 //grupa 1 osobowa
                 if (k.wielkosc_grupy == 1) {
                     //stoliki X1 dla 1 osoby
                     tablica = pam->stoliki_x1;
                     for (int j = 0; j < STOLIKI_X1; j++) {
-                        if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
+                        if (tablica[j].zarezerwowany == false &&
+                            (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
                             && (tablica[j].ile_zajetych_miejsc + 1 <= tablica[j].pojemnosc_max)) {
                             przypisane_id = j;
                             przypisany_typ = 1;
@@ -59,7 +76,8 @@ int main() {
                     if (przypisane_id == -1) {
                         tablica = pam->stoliki_x2;
                         for (int j = 0; j < STOLIKI_X2; j++) {
-                            if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
+                            if (tablica[j].zarezerwowany == false &&
+                                (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
                                 && (tablica[j].ile_zajetych_miejsc + 1 <= tablica[j].pojemnosc_max)) {
                                 przypisane_id = j;
                                 przypisany_typ = 2;
@@ -70,8 +88,10 @@ int main() {
                     //stoliki X3 dla 1 osoby
                     if (przypisane_id == -1) {
                         tablica = pam->stoliki_x3;
-                        for (int j = 0; j < STOLIKI_X3; j++) {
-                            if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
+                        aktualna_liczba = pam->aktualna_liczba_X3;
+                        for (int j = 0; j < aktualna_liczba; j++) {
+                            if (tablica[j].zarezerwowany == false &&
+                                (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
                                 && (tablica[j].ile_zajetych_miejsc + 1 <= tablica[j].pojemnosc_max)) {
                                 przypisane_id = j;
                                 przypisany_typ = 3;
@@ -83,7 +103,8 @@ int main() {
                     if (przypisane_id == -1) {
                         tablica = pam->stoliki_x4;
                         for (int j = 0; j < STOLIKI_X4; j++) {
-                            if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
+                            if (tablica[j].zarezerwowany == false &&
+                                (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 1) 
                                 && (tablica[j].ile_zajetych_miejsc + 1 <= tablica[j].pojemnosc_max)) {
                                 przypisane_id = j;
                                 przypisany_typ = 4;
@@ -97,7 +118,8 @@ int main() {
                     //stoliki X2 dla 2 osób
                     tablica = pam->stoliki_x2;
                     for (int j = 0; j < STOLIKI_X2; j++) {
-                        if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 2) 
+                        if (tablica[j].zarezerwowany == false &&
+                            (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 2) 
                             && (tablica[j].ile_zajetych_miejsc + 2 <= tablica[j].pojemnosc_max)) {
                             przypisane_id = j;
                             przypisany_typ = 2;
@@ -107,7 +129,8 @@ int main() {
                     //stoliki X4 dla 2 osób
                     tablica = pam->stoliki_x4;
                     for (int j = 0; j < STOLIKI_X4; j++) {
-                        if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 2) 
+                        if (tablica[j].zarezerwowany == false &&
+                            (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 2) 
                             && (tablica[j].ile_zajetych_miejsc + 2 <= tablica[j].pojemnosc_max)) {
                             przypisane_id = j;
                             przypisany_typ = 4;
@@ -119,8 +142,10 @@ int main() {
                 else if (k.wielkosc_grupy == 3) {
                     //stoliki X3 dla 3 osób
                     tablica = pam->stoliki_x3;
-                    for (int j = 0; j < STOLIKI_X3; j++) {
-                        if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 3) 
+                    aktualna_liczba = pam->aktualna_liczba_X3;
+                    for (int j = 0; j < aktualna_liczba; j++) {
+                        if (tablica[j].zarezerwowany == false &&
+                            (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 3) 
                             && (tablica[j].ile_zajetych_miejsc + 3 <= tablica[j].pojemnosc_max)) {
                             przypisane_id = j;
                             przypisany_typ = 3;
@@ -133,7 +158,8 @@ int main() {
                     //stoliki X4 dla 4 osób
                     tablica = pam->stoliki_x4;
                     for (int j = 0; j < STOLIKI_X4; j++) {
-                        if ((tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 4) 
+                        if (tablica[j].zarezerwowany == false &&
+                            (tablica[j].ile_zajetych_miejsc == 0 || tablica[j].wielkosc_grupy_siedzacej == 4) 
                             && (tablica[j].ile_zajetych_miejsc + 4 <= tablica[j].pojemnosc_max)) {
                             przypisane_id = j;
                             przypisany_typ = 4;
@@ -176,7 +202,7 @@ int main() {
             }
             semaforPodnies(sem_id);
        }
-       usleep(1000000);
+       usleep(100000);
     }
     odlaczPamiec(pam);
     return 0;

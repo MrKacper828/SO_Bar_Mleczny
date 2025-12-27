@@ -1,4 +1,4 @@
-//logger.h - definicje funkcji z loggera
+//logger.h - definicje funkcji z logger.cpp
 
 #ifndef LOGGER_H
 #define LOGGER_H
