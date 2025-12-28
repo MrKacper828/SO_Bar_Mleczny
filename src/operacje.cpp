@@ -23,7 +23,7 @@ key_t stworzKlucz(int klucz_struktury) {
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 1, IPC_CREAT | 0666);
+    int sem_id = semget(klucz, 1, IPC_CREAT | 0600);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
@@ -66,7 +66,7 @@ void semaforOpusc(int sem_id) { //P
 
 int polaczSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 0, 0666);
+    int sem_id = semget(klucz, 0, 0600);
     if (sem_id == -1) {
         perror("Błąd połączenia semafora(semget)");
         exit(1);
@@ -78,7 +78,7 @@ int polaczSemafor() {
 //pamięć dzielona
 int alokujPamiec() {
     key_t klucz = stworzKlucz(KLUCZ_PD);
-    int pam_id = shmget(klucz, sizeof(PamiecDzielona), IPC_CREAT | 0666);
+    int pam_id = shmget(klucz, sizeof(PamiecDzielona), IPC_CREAT | 0600);
     if (pam_id == -1) {
         perror("Błąd tworzenia pamięci dzielonej(shmget IPC_CREAT)");
         exit(1);
@@ -109,7 +109,7 @@ void odlaczPamiec(PamiecDzielona* adres) {
 
 int polaczPamiec() {
     key_t klucz = stworzKlucz(KLUCZ_PD);
-    int kol_id = shmget(klucz, sizeof(PamiecDzielona), 0666);
+    int kol_id = shmget(klucz, sizeof(PamiecDzielona), 0600);
     if (kol_id == -1) {
         perror("Błąd połączenia pamięci dzielonej(shmget)");
         exit(1);
@@ -121,7 +121,7 @@ int polaczPamiec() {
 //kolejki
 int utworzKolejke() {
     key_t klucz = stworzKlucz(KLUCZ_KOL);
-    int kol_id = msgget(klucz, IPC_CREAT | 0666);
+    int kol_id = msgget(klucz, IPC_CREAT | 0600);
     if (kol_id == -1) {
         perror("Błąd tworzenia kolejki(msgget IPC_CREAT)");
         exit(1);
@@ -137,7 +137,7 @@ void usunKolejke(int kol_id) {
 
 int polaczKolejke() {
     key_t klucz = stworzKlucz(KLUCZ_KOL);
-    int kol_id = msgget(klucz, 0666);
+    int kol_id = msgget(klucz, 0600);
     if (kol_id == -1) {
         perror("Błąd połączenia kolejki(msgget)");
         exit(1);

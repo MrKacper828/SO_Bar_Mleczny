@@ -22,7 +22,15 @@ int main() {
 
     std::vector<Klient> kolejka;
     Komunikat kom;
+
     while (true) {
+        if (pam->blokada_rezerwacyjna) {
+            if (!pam->pozar) {
+                usleep(100000);
+                continue;
+            }
+        }
+
         while (odbierzKomunikat(kol_id, TYP_KLIENT_KOLEJKA, &kom, false)) {
             Klient nowy;
             nowy.pid = kom.nadawca;

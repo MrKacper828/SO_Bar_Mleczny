@@ -40,6 +40,7 @@ void zakonczenie(int sig) {
 
 int main() {
     signal(SIGINT, zakonczenie);
+    signal(SIGTERM, zakonczenie);
     srand(time(NULL));
 
     tabula_rasa();
@@ -81,6 +82,7 @@ int main() {
 
     pam->pozar = false;
     pam->podwojenie_X3 = false;
+    pam->blokada_rezerwacyjna = false;
     pam->aktualna_liczba_X3 = STOLIKI_X3 / 2;
     pam->liczba_klientow = 0;
 
@@ -115,15 +117,24 @@ int main() {
 
     sleep(1);
     //klienci
-    int liczba_klientow = 100;
-    while (liczba_klientow > 0) {
+    while (true) {
 
         if (pam->pozar) {
             break;
         }
 
+        int status;
+        pid_t zakonczony_proces;
+        while ((zakonczony_proces = waitpid(-1, &status, WNOHANG)) > 0) {
+            for (size_t i = 0; i < procesy_potomne.size(); i++) {
+                if (procesy_potomne[i] == zakonczony_proces) {
+                    procesy_potomne.erase(procesy_potomne.begin() + i);
+                    break;
+                }
+            }
+        }
+
         int wielkosc_grupy = (rand() % 4) + 1;
-        //int wielkosc_grupy = 1;
         std::string wielkosc = std::to_string(wielkosc_grupy);
 
         pid = fork();
@@ -136,7 +147,6 @@ int main() {
             procesy_potomne.push_back(pid);
         }
         usleep(500000 + (rand() % 1000000));
-        liczba_klientow--;
     }
 
     for (size_t i = 0; i < procesy_potomne.size(); i++) {

@@ -36,8 +36,8 @@ struct PamiecDzielona {
 
     bool pozar;
     bool podwojenie_X3;
+    bool blokada_rezerwacyjna;
     int aktualna_liczba_X3;
-
     int liczba_klientow;
 };
 

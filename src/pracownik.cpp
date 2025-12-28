@@ -42,48 +42,114 @@ int main() {
                     int typ_rezerwacji = zamowienie.typ_stolika;
                     int zarezerwowano = 0;
 
-                    logger("Pracownik: Zaczynam rezerwację " + std::to_string(ilosc_rezerwacji) + " stolików typu " + std::to_string(typ_rezerwacji));
-                    semaforOpusc(sem_id);
-
-                    Stolik *tablica = nullptr;
-                    int aktualna_liczba;
-
+                    Stolik *tablica_wolne = nullptr;
+                    int ilosc_stolikow = 0;
                     if (typ_rezerwacji == 1) {
-                        tablica = pam->stoliki_x1;
-                        aktualna_liczba = STOLIKI_X1;
+                        tablica_wolne = pam->stoliki_x1;
+                        ilosc_stolikow = STOLIKI_X1;
                     }
                     else if (typ_rezerwacji == 2) {
-                        tablica = pam->stoliki_x2;
-                        aktualna_liczba = STOLIKI_X2;
+                        tablica_wolne = pam->stoliki_x2;
+                        ilosc_stolikow = STOLIKI_X2;
                     }
                     else if (typ_rezerwacji == 3) {
-                        tablica = pam->stoliki_x3;
-                        aktualna_liczba = pam->aktualna_liczba_X3;
+                        tablica_wolne = pam->stoliki_x3;
+                        ilosc_stolikow = pam->aktualna_liczba_X3;
                     }
                     else if (typ_rezerwacji == 4) {
-                        tablica = pam->stoliki_x4;
-                        aktualna_liczba = STOLIKI_X4;
+                        tablica_wolne = pam->stoliki_x4;
+                        ilosc_stolikow = STOLIKI_X4;
                     }
 
-                    if (tablica != nullptr) {
-                        for (int i = 0; i < aktualna_liczba; i++) {
-                            if (!tablica[i].zarezerwowany && tablica[i].ile_zajetych_miejsc == 0) {
-                                tablica[i].zarezerwowany = true;
-                                zarezerwowano++;
-                                logger("Pracownik: Zarezerwowałem stolik " + std::to_string(i) + " typu " + std::to_string(typ_rezerwacji));
-
-                                if (zarezerwowano == ilosc_rezerwacji) {
-                                    break;
-                                }
+                    int rezerwacja_wolne = 0;
+                    if (tablica_wolne != nullptr) {
+                        for (int i = 0; i < ilosc_stolikow; i++) {
+                            if (!tablica_wolne[i].zarezerwowany) {
+                                rezerwacja_wolne++;
                             }
                         }
                     }
-                    semaforPodnies(sem_id);
-                    if (zarezerwowano < ilosc_rezerwacji) {
-                        logger("Pracownik: Niewykonalne wymagania, zarezerwowano: " + std::to_string(zarezerwowano));
+
+                    if (rezerwacja_wolne == 0) {
+                        logger("Pracownik: Wszystkie stoliki typu " + std::to_string(typ_rezerwacji) + " są już zarezerwowane, nie wykonuję zadanej rezerwacji");
                     }
                     else {
-                        logger("Pracownik: Rezerwacja zakończona");
+                        if (ilosc_rezerwacji > rezerwacja_wolne) {
+                            std::string rezerwacja = "Pracownik: Żądana rezerwacja przekracza liczbę dostępnych/niezarezerwowanych danych stolików, rezerwuję wszystkie dostępne danego typu";
+                            logger(rezerwacja);
+                            ilosc_rezerwacji = rezerwacja_wolne;
+                        }
+                        logger("Pracownik: Zaczynam rezerwację " + std::to_string(ilosc_rezerwacji) + " stolików typu " + std::to_string(typ_rezerwacji));
+                        
+                        pam->blokada_rezerwacyjna = true;
+
+                        while(zarezerwowano < ilosc_rezerwacji) {
+                            if (pam->pozar) {
+                                logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
+                                pam->blokada_rezerwacyjna = false;
+                                break;
+                            }
+                        
+                            semaforOpusc(sem_id);
+                            Stolik *tablica = nullptr;
+
+                            if (typ_rezerwacji == 1) {
+                                tablica = pam->stoliki_x1;
+                            }
+                            else if (typ_rezerwacji == 2) {
+                                tablica = pam->stoliki_x2;
+                            }
+                            else if (typ_rezerwacji == 3) {
+                                tablica = pam->stoliki_x3;
+                            }
+                            else if (typ_rezerwacji == 4) {
+                                tablica = pam->stoliki_x4;
+                            }
+
+                            if (tablica != nullptr) {
+                                int petla = 0;
+                                if (typ_rezerwacji == 3) {
+                                    petla = pam->aktualna_liczba_X3;
+                                }
+                                else {
+                                    petla = ilosc_stolikow;
+                                }
+                                for (int i = 0; i < petla; i++) {
+                                    if (!tablica[i].zarezerwowany && tablica[i].ile_zajetych_miejsc == 0) {
+                                        tablica[i].zarezerwowany = true;
+                                        zarezerwowano++;
+                                        logger("Pracownik: Zarezerwowałem stolik " + std::to_string(i) + " typu " + std::to_string(typ_rezerwacji));
+                                        if (zarezerwowano == ilosc_rezerwacji) {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            semaforPodnies(sem_id);
+                            if (zarezerwowano == ilosc_rezerwacji) {
+                                break;
+                            }
+
+                            //odbiór naczyń i wydanie zaległych posiłków żeby się zwolniły miejsca
+                            Komunikat zwalnianie;
+                            if (odbierzKomunikat(kol_id, TYP_PRACOWNIK, &zwalnianie, false)) {
+                                int kod = zwalnianie.id_stolika;
+                                if (kod == 200) {
+                                    logger("Pracownik: W trakcie rezerwacji odbieram naczynia od " + std::to_string(zwalnianie.nadawca));
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 0, 0, 0);
+                                }
+                                else if (kod < 100) {
+                                    logger("Pracownik: W trakcie rezerwacji wydaję posiłek dla " + std::to_string(zwalnianie.nadawca));
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 1, zwalnianie.typ_stolika, kod);
+                                }
+                            }
+                            usleep(50000);
+                        }
+                        pam->blokada_rezerwacyjna = false;
+                        if (!pam->pozar) {
+                            std::string sukces = "Pracownik: Rezerwacja zakończna " + std::to_string(zarezerwowano) + " stolików typu " + std::to_string(typ_rezerwacji) + " można wznowić przyjmowanie klientów"; 
+                            logger(sukces);
+                        }
                     }
                 }
 
