@@ -48,8 +48,14 @@ void semaforPodnies(int sem_id) { //V
     operacje.sem_op = 1;
     operacje.sem_flg = 0;
 
-    if (semop(sem_id, &operacje, 1) == -1) {
-        perror("Błąd poniesienia semafora(semop 1)");
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        else {
+            perror("Błąd poniesienia semafora(semop 1)");
+            break;
+        }
     }
 }
 
@@ -59,8 +65,14 @@ void semaforOpusc(int sem_id) { //P
     operacje.sem_op = -1;
     operacje.sem_flg = 0;
 
-    if (semop(sem_id, &operacje, 1) == -1) {
-        perror("Błąd opuszczenia semafora(semop -1)");
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        else {
+            perror("Błąd opuszczenia semafora(semop -1)");
+            break;
+        }
     }
 }
 
