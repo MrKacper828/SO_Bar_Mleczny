@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    //standardowe zachowanie
     logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y");
     wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0);
 
@@ -68,6 +69,7 @@ int main(int argc, char* argv[]) {
             usleep(50000);
         }
     }
+
     //jedzenie
     usleep(8000000 + (rand() % 5000000));
     if (pam->pozar) {
@@ -79,9 +81,9 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    //zwrot naczyń
     std::string zwrot = "Klient: " + std::to_string(getpid()) + " idę zwrócić naczynia";
     logger(zwrot);
-
     wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 200);
 
     Komunikat potwierdzenie;

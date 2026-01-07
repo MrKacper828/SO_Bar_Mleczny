@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+//tworzenie poprawnych kluczy
 key_t stworzKlucz(int klucz_struktury) {
     key_t klucz = ftok(KLUCZ_SCIEZKA, klucz_struktury);
     if (klucz == -1) {
