@@ -24,6 +24,7 @@ int main() {
     Komunikat kom;
 
     while (true) {
+        //przerwa w przyjmowaniu klientów na czas rezerwacji przez pracownika
         if (pam->blokada_rezerwacyjna) {
             if (!pam->pozar) {
                 usleep(100000);
@@ -31,6 +32,7 @@ int main() {
             }
         }
 
+        //odbieranie klientów w kolejce do kasy
         while (odbierzKomunikat(kol_id, TYP_KLIENT_KOLEJKA, &kom, false)) {
             Klient nowy;
             nowy.pid = kom.nadawca;
@@ -56,7 +58,7 @@ int main() {
             break;
         }
     
-
+        //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
             semaforOpusc(sem_id);
             for (size_t i = 0; i < kolejka.size(); i++) {

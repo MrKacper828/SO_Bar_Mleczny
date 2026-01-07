@@ -1,4 +1,4 @@
-//operacje.h - definicje funkcji semaforów, pamieci dzielonej i kolejek komunikatów
+//operacje.h - definicje funkcji semaforów, pamieci dzielonej i kolejek komunikatów z operacje.cpp
 
 #ifndef OPERACJE_H
 #define OPERACJE_H

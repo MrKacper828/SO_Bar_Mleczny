@@ -24,6 +24,7 @@ int main() {
             else {
                 int kod_polecenia = zamowienie.id_stolika;
 
+                //podwojenie liczby stolików od kierownika
                 if (kod_polecenia == 101) {
                     semaforOpusc(sem_id);
                     if (!pam->podwojenie_X3) {
@@ -37,6 +38,7 @@ int main() {
                     semaforPodnies(sem_id);
                 }
 
+                //rezerwacja od kierownika
                 else if (kod_polecenia == 102) {
                     int ilosc_rezerwacji = zamowienie.dane;
                     int typ_rezerwacji = zamowienie.typ_stolika;
@@ -153,6 +155,7 @@ int main() {
                     }
                 }
 
+                //ovieranie naczyń od klientów
                 else if (kod_polecenia == 200) {
                     pid_t klient_pid = zamowienie.nadawca;
                     std::string naczynia = "Pracownik: Odebrałem naczynia od klienta " + std::to_string(klient_pid);
@@ -161,6 +164,7 @@ int main() {
                     wyslijKomunikat(kol_id, klient_pid, getpid(), 0, 0, 0);
                 }
 
+                //wydawanie posiłków dla klientów
                 else {
                     pid_t klient_pid = zamowienie.nadawca;
                     int typ_stolika = zamowienie.typ_stolika;

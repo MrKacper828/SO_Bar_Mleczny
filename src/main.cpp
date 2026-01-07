@@ -122,7 +122,8 @@ int main() {
         if (pam->pozar) {
             break;
         }
-
+        
+        //usuwanie klientów którzy już opuścili bar
         int status;
         pid_t zakonczony_proces;
         while ((zakonczony_proces = waitpid(-1, &status, WNOHANG)) > 0) {

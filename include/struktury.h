@@ -15,7 +15,7 @@ const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 //max ilość stolików w restauracji
 const int STOLIKI_X1 = 2;
 const int STOLIKI_X2 = 2;
-//inicjalizować 2x większą parzystą liczbę żeby dało się użyć komendy podwojenia
+//inicjalizować parzystą 2x większą liczbę żeby dało się użyć komendy podwojenia stolików X3
 const int STOLIKI_X3 = 6;
 const int STOLIKI_X4 = 4;
 
@@ -48,7 +48,6 @@ struct Komunikat {
     long mtype;
     pid_t nadawca;
     int dane;
-
     int id_stolika;
     int typ_stolika;
 };

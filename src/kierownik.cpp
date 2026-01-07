@@ -6,6 +6,7 @@
 #include "struktury.h"
 #include "logger.h"
 
+//funkcja do wyświetlania ile stolików na ile dostępnych jest zarezerwowanych
 void stanStolikow(PamiecDzielona *pam) {
     int wolne_X1 = 0;
     int wolne_X2 = 0;
