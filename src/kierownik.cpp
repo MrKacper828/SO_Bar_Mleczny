@@ -110,15 +110,15 @@ int main() {
         }
 
         else if (wybor == 3) {
-            semaforOpusc(sem_id);
+            semaforOpusc(sem_id, SEM_MAIN);
             pam->pozar = true;
             logger("Kierownik: Ogłaszam pożar i ewakuację!");
-            semaforPodnies(sem_id);
+            semaforPodnies(sem_id, SEM_MAIN);
 
             while (true) {
-                semaforOpusc(sem_id);
+                semaforOpusc(sem_id, SEM_MAIN);
                 int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id);
+                semaforPodnies(sem_id, SEM_MAIN);
 
                 if (pozostalo <= 0) {
                     break;
@@ -130,7 +130,9 @@ int main() {
         }
 
         else if (wybor == 4) {
+            semaforOpusc(sem_id, SEM_STOLIKI);
             stanStolikow(pam);
+            semaforPodnies(sem_id, SEM_STOLIKI);
         }
 
         else {

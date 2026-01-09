@@ -21,18 +21,18 @@ int main(int argc, char* argv[]) {
     int kol_id = polaczKolejke();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
 
-    semaforOpusc(sem_id);
+    semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow++;
-    semaforPodnies(sem_id);
+    semaforPodnies(sem_id, SEM_MAIN);
 
     //oglądacze
     if ((rand() % 100) < 5) {
         std::string log = "Klient: "+ std::to_string(wielkosc_grupy) + " osoba/y tylko ogląda i wychodzi";
         logger(log);
 
-        semaforOpusc(sem_id);
+        semaforOpusc(sem_id, SEM_MAIN);
         pam->liczba_klientow--;
-        semaforPodnies(sem_id);
+        semaforPodnies(sem_id, SEM_MAIN);
         odlaczPamiec(pam);
         return 0;
     }
@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
     while (!obsluzony) {
         if (pam->pozar) {
             logger("Klient: Pożar! Uciekam z kolejki");
-            semaforOpusc(sem_id);
+            semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;
-            semaforPodnies(sem_id);
+            semaforPodnies(sem_id, SEM_MAIN);
             odlaczPamiec(pam);
             return 0;
         }    
@@ -74,9 +74,9 @@ int main(int argc, char* argv[]) {
     usleep(8000000 + (rand() % 5000000));
     if (pam->pozar) {
         logger("Klient: Pożar! Zostawiam naczynia i uciekam");
-        semaforOpusc(sem_id);
+        semaforOpusc(sem_id, SEM_MAIN);
         pam->liczba_klientow--;
-        semaforPodnies(sem_id);
+        semaforPodnies(sem_id, SEM_MAIN);
         odlaczPamiec(pam);
         return 0;
     }
@@ -91,9 +91,9 @@ int main(int argc, char* argv[]) {
     while (!naczynia_oddane) {
         if (pam->pozar) {
             logger("Klient: Pożar! Rzucam naczynia i uciekam");
-            semaforOpusc(sem_id);
+            semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;
-            semaforPodnies(sem_id);
+            semaforPodnies(sem_id, SEM_MAIN);
             odlaczPamiec(pam);
             return 0;
         }
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
     }
 
     //oddanie stolika
-    semaforOpusc(sem_id);
+    semaforOpusc(sem_id, SEM_STOLIKI);
     if (aktualny_id_stolika != -1) {
         Stolik *s = nullptr;
         if (aktualny_typ_stolika == 1) {
@@ -134,8 +134,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    semaforPodnies(sem_id, SEM_STOLIKI);
+    semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow--;
-    semaforPodnies(sem_id);
+    semaforPodnies(sem_id, SEM_MAIN);
     odlaczPamiec(pam);
     return 0;
 }

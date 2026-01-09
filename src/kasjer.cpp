@@ -46,9 +46,9 @@ int main() {
         if (pam->pozar) {
             logger("Kasjer: Pożar! Ewakuacja klientów!");
             while (true) {
-                semaforOpusc(sem_id);
+                semaforOpusc(sem_id, SEM_MAIN);
                 int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id);
+                semaforPodnies(sem_id, SEM_MAIN);
                 if (pozostalo <= 0) {
                     break;
                 }
@@ -60,7 +60,7 @@ int main() {
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
-            semaforOpusc(sem_id);
+            semaforOpusc(sem_id, SEM_STOLIKI);
             for (size_t i = 0; i < kolejka.size(); i++) {
                 Klient k = kolejka[i];
                 int przypisane_id = -1;
@@ -210,7 +210,7 @@ int main() {
                     }
                 }
             }
-            semaforPodnies(sem_id);
+            semaforPodnies(sem_id, SEM_STOLIKI);
        }
        usleep(100000);
     }

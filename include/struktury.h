@@ -12,6 +12,9 @@ const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
 const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
+const int SEM_MAIN = 0; //semafor od reszty
+const int SEM_STOLIKI = 1; //semafor od stolików
+
 //max ilość stolików w restauracji
 const int STOLIKI_X1 = 2;
 const int STOLIKI_X2 = 2;
