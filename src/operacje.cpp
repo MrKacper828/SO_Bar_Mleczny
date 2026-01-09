@@ -24,14 +24,18 @@ key_t stworzKlucz(int klucz_struktury) {
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 1, IPC_CREAT | 0600);
+    int sem_id = semget(klucz, 2, IPC_CREAT | 0600);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
     }
 
-    if (semctl(sem_id, 0, SETVAL, 1) == -1) {
-        perror("Błąd ustawinia semafora na otwarty(semctl SETVAL)");
+    if (semctl(sem_id, SEM_MAIN, SETVAL, 1) == -1) {
+        perror("Błąd ustawinia semafora main na otwarty(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_STOLIKI, SETVAL, 1) == -1) {
+        perror("Błąd ustawinia semafora stoliki na otwarty(semctl SETVAL)");
         exit(1);
     }
     return sem_id;
@@ -43,9 +47,9 @@ void usunSemafor(int sem_id) {
     }
 }
 
-void semaforPodnies(int sem_id) { //V
+void semaforPodnies(int sem_id, int sem_num) { //V
     struct sembuf operacje;
-    operacje.sem_num = 0;
+    operacje.sem_num = sem_num;
     operacje.sem_op = 1;
     operacje.sem_flg = 0;
 
@@ -60,9 +64,9 @@ void semaforPodnies(int sem_id) { //V
     }
 }
 
-void semaforOpusc(int sem_id) { //P
+void semaforOpusc(int sem_id, int sem_num) { //P
     struct sembuf operacje;
-    operacje.sem_num = 0;
+    operacje.sem_num = sem_num;
     operacje.sem_op = -1;
     operacje.sem_flg = 0;
 
