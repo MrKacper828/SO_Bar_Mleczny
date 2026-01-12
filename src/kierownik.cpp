@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <sys/sem.h>
+#include <cerrno>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -41,13 +43,22 @@ void stanStolikow(PamiecDzielona *pam) {
     std::cout << "4 osobowe: " << wolne_X4 << "/" << STOLIKI_X4 << std::endl;
 }
 
+void bladWejscia(const char* komunikat) {
+    std::cout << "\033[31m[błąd danych]: " << komunikat << "\033[0m" << std::endl;
+    std::cin.clear();
+    std::cin.ignore(1000, '\n');
+}
+
 int main() {
     int sem_id = polaczSemafor();
     int kol_id = polaczKolejke();
     int pam_id = polaczPamiec();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
 
+    semaforOpusc(sem_id, SEM_STOLIKI);
     stanStolikow(pam);
+    semaforPodnies(sem_id, SEM_STOLIKI);
+    
     int wybor;
     while (true) {
         std::cout << "Opcje Kierownika" << std::endl;
@@ -73,31 +84,24 @@ int main() {
             int typ_stolika;
             int ilosc;
 
-            while (true) {
+            while (1) {
                 std::cout << "Jaki typ stolika zarezerować (1, 2, 3, 4): ";
                 if (!(std::cin >> typ_stolika)) {
-                    std::cout << "niepoprawne dane wejściowe: ";
-                    std::cin.clear();
-                    std::cin.ignore(1000, '\n');
+                    bladWejscia("to nie jest liczba");
                     continue;
                 }
                 if (typ_stolika < 1 || typ_stolika > 4) {
-                std::cout << "Niepoprawny typ stolika\n";
-                continue;
+                    bladWejscia("nie ma takiego typu stolika");
+                    continue;
                 }
-                break;
-            }
 
-            while (true) {
                 std::cout << "Ile stolików typu " + std::to_string(typ_stolika) << " zarezerować: ";
                 if (!(std::cin >> ilosc)) {
-                    std::cout << "niepoprawne dane wejściowe: ";
-                    std::cin.clear();
-                    std::cin.ignore(1000, '\n');
+                    bladWejscia("to nie jest liczba");
                     continue;
                 }
                 if (ilosc < 0) {
-                    std::cout << "niepoprawne dane wejściowe: ";
+                    bladWejscia("ilość musi być >= 0");
                     continue;
                 }
                 break;
@@ -116,9 +120,19 @@ int main() {
             semaforPodnies(sem_id, SEM_MAIN);
 
             while (true) {
-                semaforOpusc(sem_id, SEM_MAIN);
+                struct sembuf operacje;
+                operacje.sem_num = SEM_MAIN;
+                operacje.sem_op = -1;
+                operacje.sem_flg = 0;
+
+                if (semop(sem_id, &operacje, 1) == -1) {
+                    if (errno == EIDRM || errno == EINVAL) {
+                        break;
+                    }
+                }
                 int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
+                operacje.sem_op = 1;
+                semop(sem_id, &operacje, 1);
 
                 if (pozostalo <= 0) {
                     break;
