@@ -115,7 +115,7 @@ int main() {
 
     //kierownik odpalany manualnie w osobnej konsoli do wydawania poleceń
 
-    sleep(1);
+    usleep(1000000);
     //klienci
     while (true) {
 
@@ -133,6 +133,12 @@ int main() {
                     break;
                 }
             }
+        }
+
+        semaforOpusc(sem_id, SEM_LIMIT);
+
+        if (pam->pozar) {
+            break;
         }
 
         int wielkosc_grupy = (rand() % 4) + 1;

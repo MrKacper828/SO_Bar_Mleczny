@@ -4,9 +4,47 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <ctime>
+#include <sys/msg.h>
+#include <sched.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
+
+bool szansaNaStolik(PamiecDzielona* pam, int wielkosc_grupy) {
+    if (wielkosc_grupy == 1) {
+        for (int i=0; i<STOLIKI_X1; i++) {
+            if (!pam->stoliki_x1[i].zarezerwowany) return true;
+        }
+        for (int i=0; i<STOLIKI_X2; i++) {
+            if (!pam->stoliki_x2[i].zarezerwowany) return true;
+        }
+        for (int i=0; i<pam->aktualna_liczba_X3; i++) {
+            if (!pam->stoliki_x3[i].zarezerwowany) return true;
+        }
+        for (int i=0; i<STOLIKI_X4; i++) {
+            if (!pam->stoliki_x4[i].zarezerwowany) return true;
+        }
+    }
+    else if (wielkosc_grupy == 2) {
+        for (int i=0; i<STOLIKI_X2; i++) {
+            if (!pam->stoliki_x2[i].zarezerwowany) return true;
+        }
+        for(int i=0; i<STOLIKI_X4; i++) {
+            if (!pam->stoliki_x4[i].zarezerwowany) return true;
+        }
+    }
+    else if (wielkosc_grupy == 3) {
+        for (int i=0; i<pam->aktualna_liczba_X3; i++) {
+            if (!pam->stoliki_x3[i].zarezerwowany) return true;
+        }
+    }
+    else if (wielkosc_grupy == 4) {
+        for (int i=0; i<STOLIKI_X4; i++) {
+            if (!pam->stoliki_x4[i].zarezerwowany) return true;
+        }
+    }
+    return false;
+}
 
 int main(int argc, char* argv[]) {
     srand(time(NULL) ^ getpid());
@@ -34,6 +72,40 @@ int main(int argc, char* argv[]) {
         pam->liczba_klientow--;
         semaforPodnies(sem_id, SEM_MAIN);
         odlaczPamiec(pam);
+        semaforPodnies(sem_id, SEM_LIMIT);
+        return 0;
+    }
+
+    //sprawdzanie czy kolejka komunikatów jest przepełniona, jeżeli tak to klient rezygnuje
+    struct msqid_ds stan_kolejki;
+    if (msgctl(kol_id, IPC_STAT, &stan_kolejki) == 0) {
+        bool stan = (stan_kolejki.msg_qnum >= MAX_KLIENTOW);
+        if (stan) {
+            logger("Klient: Duża kolejka, odpuszczam");
+            semaforOpusc(sem_id, SEM_MAIN);
+            pam->liczba_klientow--;
+            semaforPodnies(sem_id, SEM_MAIN);
+            odlaczPamiec(pam);
+            semaforPodnies(sem_id, SEM_LIMIT);
+            return 0;
+        }
+    }
+
+    //sprawdzanie czy klient ma szansę na stolik
+    //szuka czy będzie dla niego stolik który nie jest zarezerwowany
+    semaforOpusc(sem_id, SEM_STOLIKI);
+    bool szansa = szansaNaStolik(pam, wielkosc_grupy);
+    semaforPodnies(sem_id, SEM_STOLIKI);
+
+    if (!szansa) {
+        std::string brak = "Klient: Brak stolików (wszystko dla mnie zarezerwowane), wychodzę";
+        logger(brak);
+
+        semaforOpusc(sem_id, SEM_MAIN);
+        pam->liczba_klientow--;
+        semaforPodnies(sem_id, SEM_MAIN);
+        odlaczPamiec(pam);
+        semaforPodnies(sem_id, SEM_LIMIT);
         return 0;
     }
 
@@ -54,6 +126,7 @@ int main(int argc, char* argv[]) {
             pam->liczba_klientow--;
             semaforPodnies(sem_id, SEM_MAIN);
             odlaczPamiec(pam);
+            semaforPodnies(sem_id, SEM_LIMIT);
             return 0;
         }    
     
@@ -66,6 +139,7 @@ int main(int argc, char* argv[]) {
             obsluzony = true;
         }
         else {
+            sched_yield();
             usleep(50000);
         }
     }
@@ -78,6 +152,7 @@ int main(int argc, char* argv[]) {
         pam->liczba_klientow--;
         semaforPodnies(sem_id, SEM_MAIN);
         odlaczPamiec(pam);
+        semaforPodnies(sem_id, SEM_LIMIT);
         return 0;
     }
 
@@ -95,6 +170,7 @@ int main(int argc, char* argv[]) {
             pam->liczba_klientow--;
             semaforPodnies(sem_id, SEM_MAIN);
             odlaczPamiec(pam);
+            semaforPodnies(sem_id, SEM_LIMIT);
             return 0;
         }
 
@@ -102,6 +178,7 @@ int main(int argc, char* argv[]) {
             naczynia_oddane = true;
         }
         else {
+            sched_yield();
             usleep(50000);
         }
     }
@@ -139,5 +216,6 @@ int main(int argc, char* argv[]) {
     pam->liczba_klientow--;
     semaforPodnies(sem_id, SEM_MAIN);
     odlaczPamiec(pam);
+    semaforPodnies(sem_id, SEM_LIMIT);
     return 0;
 }

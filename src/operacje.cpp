@@ -24,7 +24,7 @@ key_t stworzKlucz(int klucz_struktury) {
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 2, IPC_CREAT | 0600);
+    int sem_id = semget(klucz, 3, IPC_CREAT | 0600);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
@@ -36,6 +36,10 @@ int utworzSemafor() {
     }
     if (semctl(sem_id, SEM_STOLIKI, SETVAL, 1) == -1) {
         perror("Błąd ustawinia semafora stoliki na otwarty(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_LIMIT, SETVAL, MAX_KLIENTOW) == -1) {
+        perror("Błąd ustawinia semafora limitu(semctl SETVAL)");
         exit(1);
     }
     return sem_id;
