@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <sys/msg.h>
-#include <sched.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -59,6 +58,8 @@ int main(int argc, char* argv[]) {
     int kol_id = polaczKolejke();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
 
+    semaforOpusc(sem_id, SEM_LIMIT);
+
     semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow++;
     semaforPodnies(sem_id, SEM_MAIN);
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
     //sprawdzanie czy kolejka komunikatów jest przepełniona, jeżeli tak to klient rezygnuje
     struct msqid_ds stan_kolejki;
     if (msgctl(kol_id, IPC_STAT, &stan_kolejki) == 0) {
-        bool stan = (stan_kolejki.msg_qnum >= MAX_KLIENTOW);
+        bool stan = (stan_kolejki.msg_qnum >= LIMIT_W_BARZE);
         if (stan) {
             logger("Klient: Duża kolejka, odpuszczam");
             semaforOpusc(sem_id, SEM_MAIN);
@@ -139,7 +140,6 @@ int main(int argc, char* argv[]) {
             obsluzony = true;
         }
         else {
-            sched_yield();
             usleep(50000);
         }
     }
@@ -178,7 +178,6 @@ int main(int argc, char* argv[]) {
             naczynia_oddane = true;
         }
         else {
-            sched_yield();
             usleep(50000);
         }
     }

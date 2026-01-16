@@ -38,7 +38,7 @@ int utworzSemafor() {
         perror("Błąd ustawinia semafora stoliki na otwarty(semctl SETVAL)");
         exit(1);
     }
-    if (semctl(sem_id, SEM_LIMIT, SETVAL, MAX_KLIENTOW) == -1) {
+    if (semctl(sem_id, SEM_LIMIT, SETVAL, LIMIT_W_BARZE) == -1) {
         perror("Błąd ustawinia semafora limitu(semctl SETVAL)");
         exit(1);
     }

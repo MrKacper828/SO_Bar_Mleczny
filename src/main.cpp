@@ -6,22 +6,50 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
+#include <thread>
+#include <mutex>
+#include <algorithm>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
 
 int sem_id, kol_id, pam_id;
 std::vector<pid_t> procesy_potomne;
+std::mutex mutex_procesy;
 pid_t kasjer_pid = 0;
 pid_t pracownik_pid = 0;
 
+//usuwanie klientów zombie
+void watekSprzatajacy() {
+    while(true) {
+        int status;
+        pid_t zakonczony = waitpid(-1, &status, WNOHANG);
+
+        if (zakonczony > 0) {
+            std::lock_guard<std::mutex> lock(mutex_procesy);
+            auto it = std::remove(procesy_potomne.begin(), procesy_potomne.end(), zakonczony);
+            if (it != procesy_potomne.end()) {
+                procesy_potomne.erase(it, procesy_potomne.end());
+            }
+        }
+        else {
+            usleep(50000);
+        }
+    }
+}
+
+//funkcja do zakończenia programu przez sygnały
 void zakonczenie(int sig) {
     std::string zakonczenie = "Zakończenie symulacji";
     logger(zakonczenie);
 
-    for (pid_t pid : procesy_potomne) {
-        kill(pid, SIGKILL);
+    {
+        std::lock_guard<std::mutex> lock(mutex_procesy);
+        for (pid_t pid : procesy_potomne) {
+            kill(pid, SIGKILL);
+        }
     }
+
     if (kasjer_pid > 0) {
         kill(kasjer_pid, SIGKILL);
     }
@@ -51,6 +79,7 @@ int main() {
 
     PamiecDzielona* pam = dolaczPamiec(pam_id);
     
+    //inicjalizacja elementów z pamięci dzielonej
     for (int i = 0; i < STOLIKI_X1; i++) {
         pam->stoliki_x1[i].id = i + 1;
         pam->stoliki_x1[i].pojemnosc_max = 1;
@@ -113,29 +142,15 @@ int main() {
         pracownik_pid = pid;
     }
 
+    //sprzątanie procesów zombie jako osobny wątek
+    std::thread t(watekSprzatajacy);
+    t.detach();
+
     //kierownik odpalany manualnie w osobnej konsoli do wydawania poleceń
 
-    usleep(1000000);
+    usleep(1000000); //opóźnienie dla estetyki w konsoli, żeby kasjer i pracownik byli pierwsi
     //klienci
-    while (true) {
-
-        if (pam->pozar) {
-            break;
-        }
-        
-        //usuwanie klientów którzy już opuścili bar
-        int status;
-        pid_t zakonczony_proces;
-        while ((zakonczony_proces = waitpid(-1, &status, WNOHANG)) > 0) {
-            for (size_t i = 0; i < procesy_potomne.size(); i++) {
-                if (procesy_potomne[i] == zakonczony_proces) {
-                    procesy_potomne.erase(procesy_potomne.begin() + i);
-                    break;
-                }
-            }
-        }
-
-        semaforOpusc(sem_id, SEM_LIMIT);
+    for (int i = 0; i < ILOSC_KLIENTOW; i++) {
 
         if (pam->pozar) {
             break;
@@ -150,23 +165,38 @@ int main() {
             perror("Błąd execl klient");
             exit(1);
         }
-        else {
+        else if (pid > 0) {
+            std::lock_guard<std::mutex> lock(mutex_procesy);
             procesy_potomne.push_back(pid);
+            usleep(1000);
         }
-        usleep(500000 + (rand() % 1000000));
+        else {
+            if (errno == EAGAIN) {
+                usleep(50000);
+                i--;
+                continue;
+            }
+            else {
+                perror("Błąd fork");
+                break;
+            }
+        }
+        
     }
 
-    for (size_t i = 0; i < procesy_potomne.size(); i++) {
-        wait(NULL);
+    while(true) {
+        if (pam->pozar) {
+            int status_kasjer = kill(kasjer_pid, 0);
+            int status_pracownik = kill(pracownik_pid, 0);
+            if (status_kasjer == -1 && errno == ESRCH &&
+                status_pracownik == -1 && errno == ESRCH) {
+                    usleep(500000);
+                    break;
+                }
+        }
+        usleep(1000000);
     }
 
-    if (kasjer_pid > 0) {
-        waitpid(kasjer_pid, NULL, 0);
-    }
-    if (pracownik_pid > 0) {
-        waitpid(pracownik_pid, NULL, 0);
-    }
-    odlaczPamiec(pam);
     usunSemafor(sem_id);
     usunKolejke(kol_id);
     zwolnijPamiec(pam_id);

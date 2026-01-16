@@ -16,14 +16,15 @@ const int SEM_MAIN = 0; //semafor od reszty
 const int SEM_STOLIKI = 1; //semafor od stolików
 const int SEM_LIMIT = 2; //semafor do tworzenia klientów
 
-const int MAX_KLIENTOW = 100; //limit tworzenia klientów na raz
+const int ILOSC_KLIENTOW = 10000; //ilość tworzonych procesów klientów
+const int LIMIT_W_BARZE = 100; //limit klientów w barze
 
 //max ilość stolików w restauracji
-const int STOLIKI_X1 = 3;
-const int STOLIKI_X2 = 5;
+const int STOLIKI_X1 = 8;
+const int STOLIKI_X2 = 10;
 //inicjalizować parzystą 2x większą liczbę żeby dało się użyć komendy podwojenia stolików X3
-const int STOLIKI_X3 = 6;
-const int STOLIKI_X4 = 8;
+const int STOLIKI_X3 = 18;
+const int STOLIKI_X4 = 16;
 
 struct Stolik { 
     int id;
