@@ -111,8 +111,9 @@ int main(int argc, char* argv[]) {
     }
 
     //standardowe zachowanie
-    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y");
-    wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0);
+    int wybrane_danie = (rand() % 10) + 1; //losowanie dnia z menu od 1 do 10
+    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y zamawiamy danie nr " + std::to_string(wybrane_danie));
+    wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0, wybrane_danie);
 
     int aktualny_id_stolika = -1;
     int aktualny_typ_stolika = 0;
@@ -159,7 +160,7 @@ int main(int argc, char* argv[]) {
     //zwrot naczyń
     std::string zwrot = "Klient: " + std::to_string(getpid()) + " idę zwrócić naczynia";
     logger(zwrot);
-    wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 200);
+    wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 200, 0);
 
     Komunikat potwierdzenie;
     bool naczynia_oddane = false;

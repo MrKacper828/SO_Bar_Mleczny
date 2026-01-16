@@ -77,7 +77,7 @@ int main() {
         
         if (wybor == 1) {
             logger("Kierownik: Wysyłam do pracownika rozkaz podwojenia liczby stolików X3");
-            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 101);
+            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 101, 0);
         }
 
         else if (wybor == 2) {
@@ -109,7 +109,7 @@ int main() {
 
             std::string kom = "Kierownik: wsyłam polecenie rezerwacji " + std::to_string(ilosc) + " stolików typu " + std::to_string(typ_stolika);
             logger(kom);
-            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), ilosc, typ_stolika, 102);
+            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), ilosc, typ_stolika, 102, 0);
             usleep(500000);
         }
 

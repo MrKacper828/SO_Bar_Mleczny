@@ -38,8 +38,17 @@ int main() {
             nowy.pid = kom.nadawca;
             nowy.wielkosc_grupy = kom.dane;
             kolejka.push_back(nowy);
+
+            int id_dania = kom.id_dania;
+            int ilosc = kom.dane;
+            int cena_sztuki = MENU[id_dania];
+            int wartosc_zamowienia = cena_sztuki * ilosc;
+            semaforOpusc(sem_id, SEM_MAIN);
+            pam->utarg += wartosc_zamowienia;
+            semaforPodnies(sem_id, SEM_MAIN);
             std::string log = "Kasjer: mam klienta: " + std::to_string(nowy.pid) +
-                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa";
+                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, danie nr: " +
+                                std::to_string(id_dania) + " (Utarg + " + std::to_string(wartosc_zamowienia) + ")";
             logger(log);
         }
 
@@ -203,7 +212,7 @@ int main() {
                         std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
                         logger(log);
 
-                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id);
+                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
 
                         kolejka.erase(kolejka.begin() + i);
                         break;

@@ -92,6 +92,7 @@ int main() {
     pam->blokada_rezerwacyjna = false;
     pam->aktualna_liczba_X3 = STOLIKI_X3 / 2;
     pam->liczba_klientow = 0;
+    pam->utarg = 0;
 
     std::string zasoby = "Utworzono zasoby";
     logger(zasoby);
@@ -182,6 +183,8 @@ int main() {
         usleep(1000000);
     }
 
+    long ostateczny_utarg = pam->utarg;
+
     //sprzątanie po symulacji
     {
         std::lock_guard<std::mutex> lock(mutex_procesy);
@@ -200,6 +203,9 @@ int main() {
     usunSemafor(sem_id);
     usunKolejke(kol_id);
     zwolnijPamiec(pam_id);
+
+    std::string utarg_info = "Koniec dnia. Utarg wyniósł: " + std::to_string(ostateczny_utarg) + " PLN";
+    logger(utarg_info);
     logger("Symulacja zakończona i wszystko sprzątnięte");
     return 0;
 }

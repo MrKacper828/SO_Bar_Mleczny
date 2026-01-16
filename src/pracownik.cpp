@@ -142,11 +142,11 @@ int main() {
                                 int kod = zwalnianie.id_stolika;
                                 if (kod == 200) {
                                     logger("Pracownik: W trakcie rezerwacji odbieram naczynia od " + std::to_string(zwalnianie.nadawca));
-                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 0, 0, 0);
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 0, 0, 0, 0);
                                 }
                                 else if (kod < 100) {
                                     logger("Pracownik: W trakcie rezerwacji wydaję posiłek dla " + std::to_string(zwalnianie.nadawca));
-                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 1, zwalnianie.typ_stolika, kod);
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 1, zwalnianie.typ_stolika, kod, 0);
                                 }
                             }
                             usleep(50000);
@@ -168,7 +168,7 @@ int main() {
                     std::string naczynia = "Pracownik: Odebrałem naczynia od klienta " + std::to_string(klient_pid);
                     logger(naczynia);
 
-                    wyslijKomunikat(kol_id, klient_pid, getpid(), 0, 0, 0);
+                    wyslijKomunikat(kol_id, klient_pid, getpid(), 0, 0, 0, 0);
                 }
 
                 //wydawanie posiłków dla klientów
@@ -179,7 +179,7 @@ int main() {
                     std::string log = "Pracownik: Posiłek gotowy dla " + std::to_string(klient_pid) + " można kierować się do stolika";
                     logger(log);
 
-                    wyslijKomunikat(kol_id, klient_pid, getpid(), 1, typ_stolika, kod_polecenia);
+                    wyslijKomunikat(kol_id, klient_pid, getpid(), 1, typ_stolika, kod_polecenia, 0);
                 }
             }
         }

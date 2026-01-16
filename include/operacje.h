@@ -26,7 +26,7 @@ void usunKolejke(int kol_id);
 int polaczKolejke();
 
 //komunikaty
-void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika);
+void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania);
 bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj);
 
 #endif
