@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     int kol_id = polaczKolejke();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
 
-    semaforOpusc(sem_id, SEM_LIMIT);
+    semaforOpusc(sem_id, SEM_LIMIT); //blokada przed zalaniem baru
 
     semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow++;
@@ -183,8 +183,8 @@ int main(int argc, char* argv[]) {
     }
 
     //oddanie stolika
-    semaforOpusc(sem_id, SEM_STOLIKI);
     if (aktualny_id_stolika != -1) {
+        semaforOpusc(sem_id, SEM_STOLIKI);
         Stolik *s = nullptr;
         if (aktualny_typ_stolika == 1) {
             s = &pam->stoliki_x1[aktualny_id_stolika];
@@ -204,16 +204,18 @@ int main(int argc, char* argv[]) {
             if (s->ile_zajetych_miejsc == 0) {
                 s->wielkosc_grupy_siedzacej = 0;
             }
+            semaforPodnies(sem_id, SEM_STOLIKI);
+
             std::string log = "Klient: " + std::to_string(getpid()) + " zwalniam miejsce i wychodzę";
             logger(log);
-            usleep(1000000);
         }
     }
+    usleep(10000);
 
-    semaforPodnies(sem_id, SEM_STOLIKI);
     semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow--;
     semaforPodnies(sem_id, SEM_MAIN);
+
     odlaczPamiec(pam);
     semaforPodnies(sem_id, SEM_LIMIT);
     return 0;

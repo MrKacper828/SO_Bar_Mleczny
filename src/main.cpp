@@ -18,6 +18,7 @@ std::vector<pid_t> procesy_potomne;
 std::mutex mutex_procesy;
 pid_t kasjer_pid = 0;
 pid_t pracownik_pid = 0;
+volatile int koniec = 0; //flaga do handera
 
 //usuwanie klientów zombie
 void watekSprzatajacy() {
@@ -38,37 +39,14 @@ void watekSprzatajacy() {
     }
 }
 
-//funkcja do zakończenia programu przez sygnały
-void zakonczenie(int sig) {
-    std::string zakonczenie = "Zakończenie symulacji";
-    logger(zakonczenie);
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_procesy);
-        for (pid_t pid : procesy_potomne) {
-            kill(pid, SIGKILL);
-        }
-    }
-
-    if (kasjer_pid > 0) {
-        kill(kasjer_pid, SIGKILL);
-    }
-    if (pracownik_pid > 0) {
-        kill(pracownik_pid, SIGKILL);
-    }
-
-    usunSemafor(sem_id);
-    usunKolejke(kol_id);
-    zwolnijPamiec(pam_id);
-
-    std::string koniec = "Wszystko zwolnione, koniec symulacji";
-    logger(koniec);
-    exit(0);
+//handler sygnału przerwania symulacji
+void przerwanie(int sig) {
+    koniec = 1;
 }
 
 int main() {
-    signal(SIGINT, zakonczenie);
-    signal(SIGTERM, zakonczenie);
+    signal(SIGINT, przerwanie);
+    signal(SIGTERM, przerwanie);
     srand(time(NULL));
 
     tabula_rasa();
@@ -152,6 +130,9 @@ int main() {
     //klienci
     for (int i = 0; i < ILOSC_KLIENTOW; i++) {
 
+        if (koniec) {
+            break;
+        }
         if (pam->pozar) {
             break;
         }
@@ -184,7 +165,11 @@ int main() {
         
     }
 
+    //oczekiwanie na sygnały
     while(true) {
+        if (koniec) {
+            break;
+        }
         if (pam->pozar) {
             int status_kasjer = kill(kasjer_pid, 0);
             int status_pracownik = kill(pracownik_pid, 0);
@@ -197,9 +182,24 @@ int main() {
         usleep(1000000);
     }
 
+    //sprzątanie po symulacji
+    {
+        std::lock_guard<std::mutex> lock(mutex_procesy);
+        for (pid_t pid : procesy_potomne) {
+            kill(pid, SIGKILL);
+        }
+    }
+
+    if (kasjer_pid > 0) {
+        kill(kasjer_pid, SIGKILL);
+    }
+    if (pracownik_pid > 0) {
+        kill(pracownik_pid, SIGKILL);
+    }
+
     usunSemafor(sem_id);
     usunKolejke(kol_id);
     zwolnijPamiec(pam_id);
-    logger("Symulacja zakończona");
+    logger("Symulacja zakończona i wszystko sprzątnięte");
     return 0;
 }
