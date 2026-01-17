@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <sys/msg.h>
+#include <signal.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -46,6 +47,7 @@ bool szansaNaStolik(PamiecDzielona* pam, int wielkosc_grupy) {
 }
 
 int main(int argc, char* argv[]) {
+    signal(SIGINT, SIG_IGN);
     srand(time(NULL) ^ getpid());
 
     int wielkosc_grupy = 1;

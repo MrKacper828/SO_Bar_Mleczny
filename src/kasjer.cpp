@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <unistd.h>
+#include <signal.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -13,6 +14,7 @@ struct Klient {
 };
 
 int main() {
+    signal(SIGINT, SIG_IGN);
     int kol_id = polaczKolejke();
     int sem_id = polaczSemafor();
     int pam_id = polaczPamiec();
