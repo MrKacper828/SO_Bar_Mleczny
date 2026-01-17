@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
     if (msgctl(kol_id, IPC_STAT, &stan_kolejki) == 0) {
         bool stan = (stan_kolejki.msg_qnum >= LIMIT_W_BARZE);
         if (stan) {
-            logger("Klient: Duża kolejka, odpuszczam");
+            //logger("Klient: Duża kolejka, odpuszczam");
             semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;
             semaforPodnies(sem_id, SEM_MAIN);

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <algorithm>
 #include "operacje.h"
 #include "struktury.h"
@@ -19,10 +20,15 @@ std::mutex mutex_procesy;
 pid_t kasjer_pid = 0;
 pid_t pracownik_pid = 0;
 volatile int koniec = 0; //flaga do handera
+std::atomic<int> liczba_aktywnych_klientow{0};
 
 //usuwanie klientów zombie
 void watekSprzatajacy() {
     while(true) {
+        if (koniec) {
+            return;
+        }
+
         int status;
         pid_t zakonczony = waitpid(-1, &status, WNOHANG);
 
@@ -32,6 +38,7 @@ void watekSprzatajacy() {
             if (it != procesy_potomne.end()) {
                 procesy_potomne.erase(it, procesy_potomne.end());
             }
+            liczba_aktywnych_klientow--;
         }
         else {
             usleep(50000);
@@ -129,41 +136,42 @@ int main() {
 
     usleep(1000000); //opóźnienie dla estetyki w konsoli, żeby kasjer i pracownik byli pierwsi
     //klienci
-    for (int i = 0; i < ILOSC_KLIENTOW; i++) {
+    while(!koniec) {
 
-        if (koniec) {
-            break;
-        }
         if (pam->pozar) {
             break;
         }
 
-        int wielkosc_grupy = (rand() % 4) + 1;
-        std::string wielkosc = std::to_string(wielkosc_grupy);
+        if (liczba_aktywnych_klientow < ILOSC_KLIENTOW) {
+            int wielkosc_grupy = (rand() % 4) + 1;
+            std::string wielkosc = std::to_string(wielkosc_grupy);
 
-        pid = fork();
-        if (pid == 0) {
-            execl("./klient", "klient", wielkosc.c_str(), NULL);
-            perror("Błąd execl klient");
-            exit(1);
-        }
-        else if (pid > 0) {
-            std::lock_guard<std::mutex> lock(mutex_procesy);
-            procesy_potomne.push_back(pid);
-            usleep(1000);
-        }
-        else {
-            if (errno == EAGAIN) {
-                usleep(50000);
-                i--;
-                continue;
+            pid = fork();
+            if (pid == 0) {
+                execl("./klient", "klient", wielkosc.c_str(), NULL);
+                perror("Błąd execl klient");
+                exit(1);
+            }
+            else if (pid > 0) {
+                std::lock_guard<std::mutex> lock(mutex_procesy);
+                procesy_potomne.push_back(pid);
+                liczba_aktywnych_klientow++;
+                usleep(1000);
             }
             else {
-                perror("Błąd fork");
-                break;
+                if (errno == EAGAIN) {
+                    usleep(50000);
+                    continue;
+                }
+                else {
+                    perror("Błąd fork");
+                    break;
+                }
             }
         }
-        
+        else {
+            usleep(10000);
+        }
     }
 
     //oczekiwanie na sygnały
