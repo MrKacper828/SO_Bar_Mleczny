@@ -28,21 +28,23 @@ void watekSprzatajacy() {
         if (koniec) {
             return;
         }
-
+        
         int status;
-        pid_t zakonczony = waitpid(-1, &status, WNOHANG);
-
-        if (zakonczony > 0) {
-            std::lock_guard<std::mutex> lock(mutex_procesy);
-            auto it = std::remove(procesy_potomne.begin(), procesy_potomne.end(), zakonczony);
-            if (it != procesy_potomne.end()) {
-                procesy_potomne.erase(it, procesy_potomne.end());
+        while (true) {
+            pid_t zakonczony = waitpid(-1, &status, WNOHANG);
+            if (zakonczony > 0) {
+                std::lock_guard<std::mutex> lock(mutex_procesy);
+                auto it = std::remove(procesy_potomne.begin(), procesy_potomne.end(), zakonczony);
+                if (it != procesy_potomne.end()) {
+                    procesy_potomne.erase(it, procesy_potomne.end());
+                    liczba_aktywnych_klientow--;
+                }
             }
-            liczba_aktywnych_klientow--;
+            else {
+                break;
+            }
         }
-        else {
-            usleep(50000);
-        }
+        usleep(50000);
     }
 }
 
@@ -147,6 +149,9 @@ int main() {
             semaforPodnies(sem_id, SEM_MAIN);
             break;
         }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
+        }
 
         if (liczba_aktywnych_klientow < ILOSC_KLIENTOW) {
             int wielkosc_grupy = (rand() % 4) + 1;
@@ -194,7 +199,10 @@ int main() {
                 status_pracownik == -1 && errno == ESRCH) {
                     usleep(500000);
                     break;
-                }
+            }
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
         usleep(1000000);
     }

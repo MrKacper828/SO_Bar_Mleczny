@@ -38,6 +38,7 @@ int main() {
                         logger("Pracownik: Wykonałem polecenie podwojenia liczby stolików X3");
                     }
                     else {
+                        semaforPodnies(sem_id, SEM_MAIN);
                         logger("Pracownik: Nie mogę podwoić liczby stolików X3, bo już to zrobiłem wcześniej");
                     }
                 }
@@ -101,6 +102,9 @@ int main() {
                                 logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
                                 break;
                             }
+                            else {
+                                semaforPodnies(sem_id, SEM_MAIN);
+                            }
                         
                             semaforOpusc(sem_id, SEM_STOLIKI);
                             Stolik *tablica = nullptr;
@@ -129,7 +133,6 @@ int main() {
                                 for (int i = 0; i < petla; i++) {
                                     if (!tablica[i].zarezerwowany && tablica[i].ile_zajetych_miejsc == 0) {
                                         tablica[i].zarezerwowany = true;
-                                        semaforPodnies(sem_id, SEM_STOLIKI);
                                         zarezerwowano++;
                                         logger("Pracownik: Zarezerwowałem stolik " + std::to_string(i) + " typu " + std::to_string(typ_rezerwacji));
                                         if (zarezerwowano == ilosc_rezerwacji) {
@@ -137,6 +140,10 @@ int main() {
                                         }
                                     }
                                 }
+                                semaforPodnies(sem_id, SEM_STOLIKI);
+                            }
+                            else {
+                                semaforPodnies(sem_id, SEM_STOLIKI);
                             }
                             if (zarezerwowano == ilosc_rezerwacji) {
                                 break;
@@ -166,6 +173,9 @@ int main() {
                             semaforPodnies(sem_id, SEM_MAIN);
                             std::string sukces = "Pracownik: Rezerwacja zakończna " + std::to_string(zarezerwowano) + " stolików typu " + std::to_string(typ_rezerwacji) + " można wznowić przyjmowanie klientów"; 
                             logger(sukces);
+                        }
+                        else {
+                            semaforPodnies(sem_id, SEM_MAIN);
                         }
                     }
                 }
@@ -206,6 +216,9 @@ int main() {
             }
             logger("Pracownik: Wszyscy klienci ewakuowani, uciekam");
             break;
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
         usleep(10000);
     }

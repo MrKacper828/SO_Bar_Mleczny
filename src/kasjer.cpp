@@ -32,6 +32,12 @@ int main() {
                 usleep(100000);
                 continue;
             }
+            else {
+                semaforPodnies(sem_id, SEM_MAIN);
+            }
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
 
         //odbieranie klientów w kolejce do kasy
@@ -69,6 +75,9 @@ int main() {
             }
             logger("Kasjer: Wszyscy klienci ewakuowani, zamykam kasę i uciekam");
             break;
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
@@ -191,6 +200,7 @@ int main() {
                     }
                 }
 
+                bool znaleziono = false;
                 //po znalezieniu miejsca
                 if (przypisane_id != -1) {
                     Stolik *s = nullptr;
@@ -212,16 +222,18 @@ int main() {
                         if (s->ile_zajetych_miejsc == k.wielkosc_grupy) {
                             s->wielkosc_grupy_siedzacej = k.wielkosc_grupy;
                         }
-                        semaforPodnies(sem_id, SEM_STOLIKI);
-                        
-                        std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
-                        logger(log);
-
-                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
-
-                        kolejka.erase(kolejka.begin() + i);
-                        break;
+                        znaleziono = true;
                     }
+
+                }
+                semaforPodnies(sem_id, SEM_STOLIKI);
+
+                if (znaleziono) {
+                    std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
+                    logger(log);
+                    wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                    kolejka.erase(kolejka.begin() + i);
+                    break;
                 }
             }
        }

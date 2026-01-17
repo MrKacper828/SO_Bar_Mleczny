@@ -130,9 +130,9 @@ int main() {
                         break;
                     }
                 }
-                semaforOpusc(sem_id, SEM_MAIN);
+
                 int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
+
                 operacje.sem_op = 1;
                 semop(sem_id, &operacje, 1);
 

@@ -123,8 +123,9 @@ int main(int argc, char* argv[]) {
 
     while (!obsluzony) {
         semaforOpusc(sem_id, SEM_MAIN);
-        if (pam->pozar) {
-            semaforPodnies(sem_id, SEM_MAIN);
+        bool czy_pozar = pam-> pozar;
+        semaforPodnies(sem_id, SEM_MAIN);
+        if (czy_pozar) {
             logger("Klient: Pożar! Uciekam z kolejki");
             semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;
@@ -132,7 +133,7 @@ int main(int argc, char* argv[]) {
             odlaczPamiec(pam);
             semaforPodnies(sem_id, SEM_LIMIT);
             return 0;
-        }    
+        }
     
         if (odbierzKomunikat(kol_id, getpid(), &odp, false)) {
             aktualny_id_stolika = odp.id_stolika;
@@ -160,6 +161,9 @@ int main(int argc, char* argv[]) {
         semaforPodnies(sem_id, SEM_LIMIT);
         return 0;
     }
+    else {
+        semaforPodnies(sem_id, SEM_MAIN);
+    }
 
     //zwrot naczyń
     std::string zwrot = "Klient: " + std::to_string(getpid()) + " idę zwrócić naczynia";
@@ -179,6 +183,9 @@ int main(int argc, char* argv[]) {
             odlaczPamiec(pam);
             semaforPodnies(sem_id, SEM_LIMIT);
             return 0;
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
 
         if (odbierzKomunikat(kol_id, getpid(), &potwierdzenie, false)) {
@@ -215,6 +222,9 @@ int main(int argc, char* argv[]) {
 
             std::string log = "Klient: " + std::to_string(getpid()) + " zwalniam miejsce i wychodzę";
             logger(log);
+        }
+        else {
+            semaforPodnies(sem_id, SEM_STOLIKI);
         }
     }
     usleep(10000);
