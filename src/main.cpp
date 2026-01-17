@@ -65,6 +65,7 @@ int main() {
     PamiecDzielona* pam = dolaczPamiec(pam_id);
     
     //inicjalizacja elementów z pamięci dzielonej
+    semaforOpusc(sem_id, SEM_STOLIKI);
     for (int i = 0; i < STOLIKI_X1; i++) {
         pam->stoliki_x1[i].id = i + 1;
         pam->stoliki_x1[i].pojemnosc_max = 1;
@@ -93,13 +94,16 @@ int main() {
         pam->stoliki_x4[i].wielkosc_grupy_siedzacej = 0;
         pam->stoliki_x4[i].zarezerwowany = false;
     }
+    semaforPodnies(sem_id, SEM_STOLIKI);
 
+    semaforOpusc(sem_id, SEM_MAIN);
     pam->pozar = false;
     pam->podwojenie_X3 = false;
     pam->blokada_rezerwacyjna = false;
     pam->aktualna_liczba_X3 = STOLIKI_X3 / 2;
     pam->liczba_klientow = 0;
     pam->utarg = 0;
+    semaforPodnies(sem_id, SEM_MAIN);
 
     std::string zasoby = "Utworzono zasoby";
     logger(zasoby);
@@ -137,8 +141,10 @@ int main() {
     usleep(1000000); //opóźnienie dla estetyki w konsoli, żeby kasjer i pracownik byli pierwsi
     //klienci
     while(!koniec) {
-
+        
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             break;
         }
 
@@ -179,7 +185,9 @@ int main() {
         if (koniec) {
             break;
         }
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             int status_kasjer = kill(kasjer_pid, 0);
             int status_pracownik = kill(pracownik_pid, 0);
             if (status_kasjer == -1 && errno == ESRCH &&
@@ -191,7 +199,9 @@ int main() {
         usleep(1000000);
     }
 
+    semaforOpusc(sem_id, SEM_MAIN);
     long ostateczny_utarg = pam->utarg;
+    semaforPodnies(sem_id, SEM_MAIN);
 
     //sprzątanie po symulacji
     {

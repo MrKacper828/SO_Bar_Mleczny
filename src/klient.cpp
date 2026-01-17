@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     int kol_id = polaczKolejke();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
 
-    semaforOpusc(sem_id, SEM_LIMIT); //blokada przed zalaniem baru
+    semaforOpusc(sem_id, SEM_LIMIT); //blokada przed zalaniem baru przez klientów
 
     semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow++;
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     }
 
     //standardowe zachowanie
-    int wybrane_danie = (rand() % 10) + 1; //losowanie dnia z menu od 1 do 10
+    int wybrane_danie = (rand() % 10) + 1; //losowanie dania z menu od 1 do 10
     logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y zamawiamy danie nr " + std::to_string(wybrane_danie));
     wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0, wybrane_danie);
 
@@ -122,7 +122,9 @@ int main(int argc, char* argv[]) {
     Komunikat odp;
 
     while (!obsluzony) {
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Klient: Pożar! Uciekam z kolejki");
             semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;
@@ -147,7 +149,9 @@ int main(int argc, char* argv[]) {
 
     //jedzenie
     usleep(8000000 + (rand() % 5000000));
+    semaforOpusc(sem_id, SEM_MAIN);
     if (pam->pozar) {
+        semaforPodnies(sem_id, SEM_MAIN);
         logger("Klient: Pożar! Zostawiam naczynia i uciekam");
         semaforOpusc(sem_id, SEM_MAIN);
         pam->liczba_klientow--;
@@ -165,7 +169,9 @@ int main(int argc, char* argv[]) {
     Komunikat potwierdzenie;
     bool naczynia_oddane = false;
     while (!naczynia_oddane) {
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Klient: Pożar! Rzucam naczynia i uciekam");
             semaforOpusc(sem_id, SEM_MAIN);
             pam->liczba_klientow--;

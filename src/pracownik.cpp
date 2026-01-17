@@ -18,10 +18,12 @@ int main() {
     while (true) {
         if (odbierzKomunikat(kol_id, TYP_PRACOWNIK, &zamowienie, false)) {
 
+            semaforOpusc(sem_id, SEM_MAIN);
             if (pam->pozar) {
-                
+                semaforPodnies(sem_id, SEM_MAIN);
             }
             else {
+                semaforPodnies(sem_id, SEM_MAIN);
                 int kod_polecenia = zamowienie.id_stolika;
 
                 //podwojenie liczby stolików od kierownika
@@ -29,6 +31,7 @@ int main() {
                     semaforOpusc(sem_id, SEM_MAIN);
                     if (!pam->podwojenie_X3) {
                         pam->podwojenie_X3 = true;
+                        semaforPodnies(sem_id, SEM_MAIN);
                         semaforOpusc(sem_id, SEM_STOLIKI);
                         pam->aktualna_liczba_X3 = STOLIKI_X3;
                         semaforPodnies(sem_id, SEM_STOLIKI);
@@ -37,7 +40,6 @@ int main() {
                     else {
                         logger("Pracownik: Nie mogę podwoić liczby stolików X3, bo już to zrobiłem wcześniej");
                     }
-                    semaforPodnies(sem_id, SEM_MAIN);
                 }
 
                 //rezerwacja od kierownika
@@ -46,6 +48,7 @@ int main() {
                     int typ_rezerwacji = zamowienie.typ_stolika;
                     int zarezerwowano = 0;
 
+                    semaforOpusc(sem_id, SEM_STOLIKI);
                     Stolik *tablica_wolne = nullptr;
                     int ilosc_stolikow = 0;
                     if (typ_rezerwacji == 1) {
@@ -64,6 +67,7 @@ int main() {
                         tablica_wolne = pam->stoliki_x4;
                         ilosc_stolikow = STOLIKI_X4;
                     }
+                    semaforPodnies(sem_id, SEM_STOLIKI);
 
                     int rezerwacja_wolne = 0;
                     if (tablica_wolne != nullptr) {
@@ -90,9 +94,11 @@ int main() {
                         semaforPodnies(sem_id, SEM_MAIN);
 
                         while(zarezerwowano < ilosc_rezerwacji) {
+                            semaforOpusc(sem_id, SEM_MAIN);
                             if (pam->pozar) {
-                                logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
                                 pam->blokada_rezerwacyjna = false;
+                                semaforPodnies(sem_id, SEM_MAIN);
+                                logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
                                 break;
                             }
                         
@@ -123,6 +129,7 @@ int main() {
                                 for (int i = 0; i < petla; i++) {
                                     if (!tablica[i].zarezerwowany && tablica[i].ile_zajetych_miejsc == 0) {
                                         tablica[i].zarezerwowany = true;
+                                        semaforPodnies(sem_id, SEM_STOLIKI);
                                         zarezerwowano++;
                                         logger("Pracownik: Zarezerwowałem stolik " + std::to_string(i) + " typu " + std::to_string(typ_rezerwacji));
                                         if (zarezerwowano == ilosc_rezerwacji) {
@@ -131,7 +138,6 @@ int main() {
                                     }
                                 }
                             }
-                            semaforPodnies(sem_id, SEM_STOLIKI);
                             if (zarezerwowano == ilosc_rezerwacji) {
                                 break;
                             }
@@ -155,7 +161,9 @@ int main() {
                         pam->blokada_rezerwacyjna = false;
                         semaforPodnies(sem_id, SEM_MAIN);
 
+                        semaforOpusc(sem_id, SEM_MAIN);
                         if (!pam->pozar) {
+                            semaforPodnies(sem_id, SEM_MAIN);
                             std::string sukces = "Pracownik: Rezerwacja zakończna " + std::to_string(zarezerwowano) + " stolików typu " + std::to_string(typ_rezerwacji) + " można wznowić przyjmowanie klientów"; 
                             logger(sukces);
                         }
@@ -183,7 +191,9 @@ int main() {
                 }
             }
         }
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Pracownik: Pożar! Ewakuacja klientów!");
             while (true) {
                 semaforOpusc(sem_id, SEM_MAIN);

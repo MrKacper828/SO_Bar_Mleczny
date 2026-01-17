@@ -116,8 +116,8 @@ int main() {
         else if (wybor == 3) {
             semaforOpusc(sem_id, SEM_MAIN);
             pam->pozar = true;
-            logger("Kierownik: Ogłaszam pożar i ewakuację!");
             semaforPodnies(sem_id, SEM_MAIN);
+            logger("Kierownik: Ogłaszam pożar i ewakuację!");
 
             while (true) {
                 struct sembuf operacje;
@@ -130,7 +130,9 @@ int main() {
                         break;
                     }
                 }
+                semaforOpusc(sem_id, SEM_MAIN);
                 int pozostalo = pam->liczba_klientow;
+                semaforPodnies(sem_id, SEM_MAIN);
                 operacje.sem_op = 1;
                 semop(sem_id, &operacje, 1);
 

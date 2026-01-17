@@ -25,8 +25,10 @@ int main() {
 
     while (true) {
         //przerwa w przyjmowaniu klientów na czas rezerwacji przez pracownika
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->blokada_rezerwacyjna) {
             if (!pam->pozar) {
+                semaforPodnies(sem_id, SEM_MAIN);
                 usleep(100000);
                 continue;
             }
@@ -52,7 +54,9 @@ int main() {
             logger(log);
         }
 
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Kasjer: Pożar! Ewakuacja klientów!");
             while (true) {
                 semaforOpusc(sem_id, SEM_MAIN);
@@ -69,12 +73,12 @@ int main() {
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
-            semaforOpusc(sem_id, SEM_STOLIKI);
             for (size_t i = 0; i < kolejka.size(); i++) {
                 Klient k = kolejka[i];
                 int przypisane_id = -1;
                 int przypisany_typ = 0;
 
+                semaforOpusc(sem_id, SEM_STOLIKI);
                 Stolik *tablica = nullptr;
                 int aktualna_liczba = 0;
                 
@@ -208,7 +212,8 @@ int main() {
                         if (s->ile_zajetych_miejsc == k.wielkosc_grupy) {
                             s->wielkosc_grupy_siedzacej = k.wielkosc_grupy;
                         }
-                    
+                        semaforPodnies(sem_id, SEM_STOLIKI);
+                        
                         std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
                         logger(log);
 
@@ -219,7 +224,6 @@ int main() {
                     }
                 }
             }
-            semaforPodnies(sem_id, SEM_STOLIKI);
        }
        usleep(100000);
     }
