@@ -2,11 +2,13 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <signal.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
 
 int main() {
+    signal(SIGINT, SIG_IGN);
     int kol_id = polaczKolejke();
     int sem_id = polaczSemafor();
     int pam_id = polaczPamiec();
@@ -18,10 +20,12 @@ int main() {
     while (true) {
         if (odbierzKomunikat(kol_id, TYP_PRACOWNIK, &zamowienie, false)) {
 
+            semaforOpusc(sem_id, SEM_MAIN);
             if (pam->pozar) {
-                
+                semaforPodnies(sem_id, SEM_MAIN);
             }
             else {
+                semaforPodnies(sem_id, SEM_MAIN);
                 int kod_polecenia = zamowienie.id_stolika;
 
                 //podwojenie liczby stolików od kierownika
@@ -29,15 +33,16 @@ int main() {
                     semaforOpusc(sem_id, SEM_MAIN);
                     if (!pam->podwojenie_X3) {
                         pam->podwojenie_X3 = true;
+                        semaforPodnies(sem_id, SEM_MAIN);
                         semaforOpusc(sem_id, SEM_STOLIKI);
                         pam->aktualna_liczba_X3 = STOLIKI_X3;
                         semaforPodnies(sem_id, SEM_STOLIKI);
                         logger("Pracownik: Wykonałem polecenie podwojenia liczby stolików X3");
                     }
                     else {
+                        semaforPodnies(sem_id, SEM_MAIN);
                         logger("Pracownik: Nie mogę podwoić liczby stolików X3, bo już to zrobiłem wcześniej");
                     }
-                    semaforPodnies(sem_id, SEM_MAIN);
                 }
 
                 //rezerwacja od kierownika
@@ -46,6 +51,7 @@ int main() {
                     int typ_rezerwacji = zamowienie.typ_stolika;
                     int zarezerwowano = 0;
 
+                    semaforOpusc(sem_id, SEM_STOLIKI);
                     Stolik *tablica_wolne = nullptr;
                     int ilosc_stolikow = 0;
                     if (typ_rezerwacji == 1) {
@@ -64,6 +70,7 @@ int main() {
                         tablica_wolne = pam->stoliki_x4;
                         ilosc_stolikow = STOLIKI_X4;
                     }
+                    semaforPodnies(sem_id, SEM_STOLIKI);
 
                     int rezerwacja_wolne = 0;
                     if (tablica_wolne != nullptr) {
@@ -90,10 +97,15 @@ int main() {
                         semaforPodnies(sem_id, SEM_MAIN);
 
                         while(zarezerwowano < ilosc_rezerwacji) {
+                            semaforOpusc(sem_id, SEM_MAIN);
                             if (pam->pozar) {
-                                logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
                                 pam->blokada_rezerwacyjna = false;
+                                semaforPodnies(sem_id, SEM_MAIN);
+                                logger("Pracownik: Pożar w trakcie rezerwacji, przerywam");
                                 break;
+                            }
+                            else {
+                                semaforPodnies(sem_id, SEM_MAIN);
                             }
                         
                             semaforOpusc(sem_id, SEM_STOLIKI);
@@ -130,8 +142,11 @@ int main() {
                                         }
                                     }
                                 }
+                                semaforPodnies(sem_id, SEM_STOLIKI);
                             }
-                            semaforPodnies(sem_id, SEM_STOLIKI);
+                            else {
+                                semaforPodnies(sem_id, SEM_STOLIKI);
+                            }
                             if (zarezerwowano == ilosc_rezerwacji) {
                                 break;
                             }
@@ -142,11 +157,11 @@ int main() {
                                 int kod = zwalnianie.id_stolika;
                                 if (kod == 200) {
                                     logger("Pracownik: W trakcie rezerwacji odbieram naczynia od " + std::to_string(zwalnianie.nadawca));
-                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 0, 0, 0);
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 0, 0, 0, 0);
                                 }
                                 else if (kod < 100) {
                                     logger("Pracownik: W trakcie rezerwacji wydaję posiłek dla " + std::to_string(zwalnianie.nadawca));
-                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 1, zwalnianie.typ_stolika, kod);
+                                    wyslijKomunikat(kol_id, zwalnianie.nadawca, getpid(), 1, zwalnianie.typ_stolika, kod, 0);
                                 }
                             }
                             usleep(50000);
@@ -155,9 +170,14 @@ int main() {
                         pam->blokada_rezerwacyjna = false;
                         semaforPodnies(sem_id, SEM_MAIN);
 
+                        semaforOpusc(sem_id, SEM_MAIN);
                         if (!pam->pozar) {
+                            semaforPodnies(sem_id, SEM_MAIN);
                             std::string sukces = "Pracownik: Rezerwacja zakończna " + std::to_string(zarezerwowano) + " stolików typu " + std::to_string(typ_rezerwacji) + " można wznowić przyjmowanie klientów"; 
                             logger(sukces);
+                        }
+                        else {
+                            semaforPodnies(sem_id, SEM_MAIN);
                         }
                     }
                 }
@@ -168,7 +188,7 @@ int main() {
                     std::string naczynia = "Pracownik: Odebrałem naczynia od klienta " + std::to_string(klient_pid);
                     logger(naczynia);
 
-                    wyslijKomunikat(kol_id, klient_pid, getpid(), 0, 0, 0);
+                    wyslijKomunikat(kol_id, klient_pid, getpid(), 0, 0, 0, 0);
                 }
 
                 //wydawanie posiłków dla klientów
@@ -179,11 +199,13 @@ int main() {
                     std::string log = "Pracownik: Posiłek gotowy dla " + std::to_string(klient_pid) + " można kierować się do stolika";
                     logger(log);
 
-                    wyslijKomunikat(kol_id, klient_pid, getpid(), 1, typ_stolika, kod_polecenia);
+                    wyslijKomunikat(kol_id, klient_pid, getpid(), 1, typ_stolika, kod_polecenia, 0);
                 }
             }
         }
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Pracownik: Pożar! Ewakuacja klientów!");
             while (true) {
                 semaforOpusc(sem_id, SEM_MAIN);
@@ -196,6 +218,9 @@ int main() {
             }
             logger("Pracownik: Wszyscy klienci ewakuowani, uciekam");
             break;
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
         usleep(10000);
     }

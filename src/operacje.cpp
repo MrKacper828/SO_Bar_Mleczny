@@ -38,7 +38,7 @@ int utworzSemafor() {
         perror("Błąd ustawinia semafora stoliki na otwarty(semctl SETVAL)");
         exit(1);
     }
-    if (semctl(sem_id, SEM_LIMIT, SETVAL, MAX_KLIENTOW) == -1) {
+    if (semctl(sem_id, SEM_LIMIT, SETVAL, LIMIT_W_BARZE) == -1) {
         perror("Błąd ustawinia semafora limitu(semctl SETVAL)");
         exit(1);
     }
@@ -167,13 +167,14 @@ int polaczKolejke() {
 }
 
 //komunikaty
-void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika) {
+void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania) {
     Komunikat kom;
     kom.mtype = mtyp;
     kom.nadawca = nadawca;
     kom.dane = dane;
     kom.typ_stolika = typ_stolika;
     kom.id_stolika = id_stolika;
+    kom.id_dania = id_dania;
     if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
     }

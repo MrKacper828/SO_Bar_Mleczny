@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <unistd.h>
+#include <signal.h>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -13,6 +14,7 @@ struct Klient {
 };
 
 int main() {
+    signal(SIGINT, SIG_IGN);
     int kol_id = polaczKolejke();
     int sem_id = polaczSemafor();
     int pam_id = polaczPamiec();
@@ -25,11 +27,19 @@ int main() {
 
     while (true) {
         //przerwa w przyjmowaniu klientów na czas rezerwacji przez pracownika
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->blokada_rezerwacyjna) {
             if (!pam->pozar) {
+                semaforPodnies(sem_id, SEM_MAIN);
                 usleep(100000);
                 continue;
             }
+            else {
+                semaforPodnies(sem_id, SEM_MAIN);
+            }
+        }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
         }
 
         //odbieranie klientów w kolejce do kasy
@@ -38,12 +48,23 @@ int main() {
             nowy.pid = kom.nadawca;
             nowy.wielkosc_grupy = kom.dane;
             kolejka.push_back(nowy);
+
+            int id_dania = kom.id_dania;
+            int ilosc = kom.dane;
+            int cena_sztuki = MENU[id_dania];
+            int wartosc_zamowienia = cena_sztuki * ilosc;
+            semaforOpusc(sem_id, SEM_MAIN);
+            pam->utarg += wartosc_zamowienia;
+            semaforPodnies(sem_id, SEM_MAIN);
             std::string log = "Kasjer: mam klienta: " + std::to_string(nowy.pid) +
-                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa";
+                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, danie nr: " +
+                                std::to_string(id_dania) + " (Utarg + " + std::to_string(wartosc_zamowienia) + ")";
             logger(log);
         }
 
+        semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
+            semaforPodnies(sem_id, SEM_MAIN);
             logger("Kasjer: Pożar! Ewakuacja klientów!");
             while (true) {
                 semaforOpusc(sem_id, SEM_MAIN);
@@ -57,15 +78,18 @@ int main() {
             logger("Kasjer: Wszyscy klienci ewakuowani, zamykam kasę i uciekam");
             break;
         }
+        else {
+            semaforPodnies(sem_id, SEM_MAIN);
+        }
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
-            semaforOpusc(sem_id, SEM_STOLIKI);
             for (size_t i = 0; i < kolejka.size(); i++) {
                 Klient k = kolejka[i];
                 int przypisane_id = -1;
                 int przypisany_typ = 0;
 
+                semaforOpusc(sem_id, SEM_STOLIKI);
                 Stolik *tablica = nullptr;
                 int aktualna_liczba = 0;
                 
@@ -178,6 +202,7 @@ int main() {
                     }
                 }
 
+                bool znaleziono = false;
                 //po znalezieniu miejsca
                 if (przypisane_id != -1) {
                     Stolik *s = nullptr;
@@ -199,18 +224,20 @@ int main() {
                         if (s->ile_zajetych_miejsc == k.wielkosc_grupy) {
                             s->wielkosc_grupy_siedzacej = k.wielkosc_grupy;
                         }
-                    
-                        std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
-                        logger(log);
-
-                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id);
-
-                        kolejka.erase(kolejka.begin() + i);
-                        break;
+                        znaleziono = true;
                     }
+
+                }
+                semaforPodnies(sem_id, SEM_STOLIKI);
+
+                if (znaleziono) {
+                    std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
+                    logger(log);
+                    wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                    kolejka.erase(kolejka.begin() + i);
+                    break;
                 }
             }
-            semaforPodnies(sem_id, SEM_STOLIKI);
        }
        usleep(100000);
     }
