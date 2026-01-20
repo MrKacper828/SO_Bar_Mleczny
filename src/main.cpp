@@ -88,28 +88,28 @@ int main() {
     //inicjalizacja elementów z pamięci dzielonej
     semaforOpusc(sem_id, SEM_STOLIKI);
     for (int i = 0; i < STOLIKI_X1; i++) {
-        pam->stoliki_x1[i].id = i + 1;
+        pam->stoliki_x1[i].id = i;
         pam->stoliki_x1[i].pojemnosc_max = 1;
         pam->stoliki_x1[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x1[i].wielkosc_grupy_siedzacej = 0;
         pam->stoliki_x1[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X2; i++) {
-        pam->stoliki_x2[i].id = i + 1;
+        pam->stoliki_x2[i].id = i;
         pam->stoliki_x2[i].pojemnosc_max = 2;
         pam->stoliki_x2[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x2[i].wielkosc_grupy_siedzacej = 0;
         pam->stoliki_x2[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X3; i++) {
-        pam->stoliki_x3[i].id = i + 1;
+        pam->stoliki_x3[i].id = i;
         pam->stoliki_x3[i].pojemnosc_max = 3;
         pam->stoliki_x3[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x3[i].wielkosc_grupy_siedzacej = 0;
         pam->stoliki_x3[i].zarezerwowany = false;
     }
     for (int i = 0; i < STOLIKI_X4; i++) {
-        pam->stoliki_x4[i].id = i + 1;
+        pam->stoliki_x4[i].id = i;
         pam->stoliki_x4[i].pojemnosc_max = 4;
         pam->stoliki_x4[i].ile_zajetych_miejsc = 0;
         pam->stoliki_x4[i].wielkosc_grupy_siedzacej = 0;

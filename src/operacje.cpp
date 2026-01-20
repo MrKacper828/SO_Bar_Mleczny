@@ -87,7 +87,7 @@ void semaforOpusc(int sem_id, int sem_num) { //P
 
 int polaczSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 0, 0600);
+    int sem_id = semget(klucz, 0, 0);
     if (sem_id == -1) {
         perror("Błąd połączenia semafora(semget)");
         exit(1);
@@ -190,8 +190,17 @@ bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj) {
         flaga = IPC_NOWAIT;
     }
 
-    if (msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga) != -1) {
-        return true;
+    while (true) {
+        ssize_t result = msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga);
+        if (result != -1) {
+            return true;
+        }
+        if (errno == EINTR) {
+            if (!czekaj) {
+                return false;
+            }
+            continue;
+        }
+        return false;
     }
-    return false;
 }
