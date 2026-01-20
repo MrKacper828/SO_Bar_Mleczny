@@ -4,10 +4,18 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include <atomic>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
 
+volatile sig_atomic_t ewakuacja = 0;
+
+void handler_kasjer(int signum) {
+    if (signum == SIGTERM) {
+        ewakuacja = 1;
+    }
+}
 struct Klient {
     pid_t pid;
     int wielkosc_grupy;
@@ -38,7 +46,12 @@ int sprobujZnalezcMiejsce(Stolik* tablica, int liczba_stolikow, int wielkosc_gru
 }
 
 int main() {
-    signal(SIGINT, SIG_IGN);
+    struct sigaction sa;
+    sa.sa_handler = handler_kasjer;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGTERM, &sa, NULL);
+
     int kol_id = polaczKolejke();
     int sem_id = polaczSemafor();
     int pam_id = polaczPamiec();
@@ -50,17 +63,28 @@ int main() {
     Komunikat kom;
 
     while (true) {
+        if (ewakuacja) {
+            while (true) {
+                semaforOpusc(sem_id, SEM_MAIN);
+                int pozostalo = pam->liczba_klientow;
+                semaforPodnies(sem_id, SEM_MAIN);
+
+                if (pozostalo <= 0) {
+                    break;
+                }
+                usleep(50000);
+            }
+            logger("Kasjer: Wszyscy klienci ewakuaowani. Zamykam kasę i uciekam.");
+            break;
+        }
+
+
         //przerwa w przyjmowaniu klientów na czas rezerwacji przez pracownika
         semaforOpusc(sem_id, SEM_MAIN);
         if (pam->blokada_rezerwacyjna) {
-            if (!pam->pozar) {
-                semaforPodnies(sem_id, SEM_MAIN);
-                usleep(100000);
-                continue;
-            }
-            else {
-                semaforPodnies(sem_id, SEM_MAIN);
-            }
+            semaforPodnies(sem_id, SEM_MAIN);
+            usleep(50000);
+            continue;
         }
         else {
             semaforPodnies(sem_id, SEM_MAIN);
@@ -68,47 +92,31 @@ int main() {
 
         //odbieranie klientów w kolejce do kasy
         while (odbierzKomunikat(kol_id, TYP_KLIENT_KOLEJKA, &kom, false)) {
+            if (ewakuacja) break;
+
             Klient nowy;
             nowy.pid = kom.nadawca;
             nowy.wielkosc_grupy = kom.dane;
             kolejka.push_back(nowy);
 
-            int id_dania = kom.id_dania;
-            int ilosc = kom.dane;
-            int cena_sztuki = MENU[id_dania];
-            int wartosc_zamowienia = cena_sztuki * ilosc;
+            int wartosc_zamowienia = kom.id_dania;
+            
             semaforOpusc(sem_id, SEM_MAIN);
             pam->utarg += wartosc_zamowienia;
             semaforPodnies(sem_id, SEM_MAIN);
             std::string log = "Kasjer: mam klienta: " + std::to_string(nowy.pid) +
-                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, danie nr: " +
-                                std::to_string(id_dania) + " (Utarg + " + std::to_string(wartosc_zamowienia) + ")";
+                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, zapłacił " +
+                                std::to_string(wartosc_zamowienia);
             logger(log);
         }
 
-        semaforOpusc(sem_id, SEM_MAIN);
-        if (pam->pozar) {
-            semaforPodnies(sem_id, SEM_MAIN);
-            logger("Kasjer: Pożar! Ewakuacja klientów!");
-            while (true) {
-                semaforOpusc(sem_id, SEM_MAIN);
-                int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
-                if (pozostalo <= 0) {
-                    break;
-                }
-                usleep(100000);
-            }
-            logger("Kasjer: Wszyscy klienci ewakuowani, zamykam kasę i uciekam");
-            break;
-        }
-        else {
-            semaforPodnies(sem_id, SEM_MAIN);
-        }
+        if(ewakuacja) continue;
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
             for (size_t i = 0; i < kolejka.size(); i++) {
+                if (ewakuacja) break;
+
                 Klient k = kolejka[i];
                 int przypisane_id = -1;
                 int przypisany_typ = 0;

@@ -22,29 +22,46 @@ pid_t pracownik_pid = 0;
 volatile int koniec = 0; //flaga do handera
 std::atomic<int> liczba_aktywnych_klientow{0};
 
+//flagi do poprawnej ewakuacji w logach
+volatile bool kasjer_zakonczony = false;
+volatile bool pracownik_zakonczony = false;
+
 //usuwanie klientów zombie
 void watekSprzatajacy() {
-    while(true) {
-        if (koniec) {
-            return;
-        }
-        
+    while (!koniec || !kasjer_zakonczony || !pracownik_pid) {
         int status;
         while (true) {
             pid_t zakonczony = waitpid(-1, &status, WNOHANG);
             if (zakonczony > 0) {
                 std::lock_guard<std::mutex> lock(mutex_procesy);
-                auto it = std::remove(procesy_potomne.begin(), procesy_potomne.end(), zakonczony);
-                if (it != procesy_potomne.end()) {
-                    procesy_potomne.erase(it, procesy_potomne.end());
-                    liczba_aktywnych_klientow--;
+
+                if (zakonczony == kasjer_pid) {
+                    kasjer_zakonczony = true;
+                }
+                else if (zakonczony == pracownik_pid) {
+                    pracownik_zakonczony = true;
+                }
+                //zoptymalizowane usuwanie z wektora
+                else {
+                    for (size_t i = 0; i < procesy_potomne.size(); ++i) {
+                        if (procesy_potomne[i] == zakonczony) {
+                            procesy_potomne[i] = procesy_potomne.back();
+                            procesy_potomne.pop_back();
+                            liczba_aktywnych_klientow--;
+                            break;
+                        }
+                    }
                 }
             }
             else {
                 break;
             }
+            usleep(50000);
+
+            if (koniec && kasjer_zakonczony && pracownik_zakonczony && procesy_potomne.empty()) {
+                break;
+            }
         }
-        usleep(50000);
     }
 }
 
@@ -55,7 +72,9 @@ void przerwanie(int sig) {
 
 int main() {
     signal(SIGINT, przerwanie);
-    signal(SIGTERM, przerwanie);
+    signal(SIGTERM, SIG_IGN);
+    signal(SIGUSR1, SIG_IGN);
+    signal(SIGUSR2, SIG_IGN);
     srand(time(NULL));
 
     tabula_rasa();
@@ -105,9 +124,11 @@ int main() {
     pam->aktualna_liczba_X3 = STOLIKI_X3 / 2;
     pam->liczba_klientow = 0;
     pam->utarg = 0;
+    pam->pracownik_pid = 0;
+    pam->pgid_grupy = getpgrp();
     semaforPodnies(sem_id, SEM_MAIN);
 
-    std::string zasoby = "Utworzono zasoby";
+    std::string zasoby = "Utworzono zasoby, start symulacji pgid: " + std::to_string(pam->pgid_grupy);
     logger(zasoby);
     
     pid_t pid;
@@ -140,13 +161,13 @@ int main() {
 
     //kierownik odpalany manualnie w osobnej konsoli do wydawania poleceń
 
-    usleep(1000000); //opóźnienie dla estetyki w konsoli, żeby kasjer i pracownik byli pierwsi
+    usleep(500000); //opóźnienie dla estetyki w konsoli, żeby kasjer i pracownik byli pierwsi
     //klienci
     while(!koniec) {
-        
         semaforOpusc(sem_id, SEM_MAIN);
         if (pam->pozar) {
             semaforPodnies(sem_id, SEM_MAIN);
+            koniec = 1;
             break;
         }
         else {
@@ -167,49 +188,29 @@ int main() {
                 std::lock_guard<std::mutex> lock(mutex_procesy);
                 procesy_potomne.push_back(pid);
                 liczba_aktywnych_klientow++;
-                usleep(1000);
-            }
-            else {
-                if (errno == EAGAIN) {
-                    usleep(50000);
-                    continue;
-                }
-                else {
-                    perror("Błąd fork");
-                    break;
-                }
             }
         }
         else {
-            usleep(10000);
+            usleep(50000);
         }
     }
 
-    //oczekiwanie na sygnały
-    while(true) {
-        if (koniec) {
-            break;
-        }
-        semaforOpusc(sem_id, SEM_MAIN);
-        if (pam->pozar) {
-            semaforPodnies(sem_id, SEM_MAIN);
-            int status_kasjer = kill(kasjer_pid, 0);
-            int status_pracownik = kill(pracownik_pid, 0);
-            if (status_kasjer == -1 && errno == ESRCH &&
-                status_pracownik == -1 && errno == ESRCH) {
-                    usleep(500000);
-                    break;
-            }
-        }
-        else {
-            semaforPodnies(sem_id, SEM_MAIN);
-        }
-        usleep(1000000);
+    logger("Symulacja: Koniec tworzenia klientów. Oczekiwanie na koniec ewakuacji");
+
+    //dla poprawności przy ewakuacji
+    int odliczanie = 500;
+    while ((!kasjer_zakonczony || !pracownik_zakonczony) && odliczanie > 0) {
+        usleep(100000);
+        odliczanie--;
     }
 
-    semaforOpusc(sem_id, SEM_MAIN);
-    long ostateczny_utarg = pam->utarg;
-    semaforPodnies(sem_id, SEM_MAIN);
+    //awaryjne usuwanie
+    if (!kasjer_zakonczony) {
+        kill(kasjer_pid, SIGKILL);
+    }
+    if (!pracownik_zakonczony) {
+        kill(pracownik_pid, SIGKILL);
+    }
 
     //sprzątanie po symulacji
     {
@@ -219,12 +220,11 @@ int main() {
         }
     }
 
-    if (kasjer_pid > 0) {
-        kill(kasjer_pid, SIGKILL);
-    }
-    if (pracownik_pid > 0) {
-        kill(pracownik_pid, SIGKILL);
-    }
+    usleep(1000000);
+
+    semaforOpusc(sem_id, SEM_MAIN);
+    long ostateczny_utarg = pam->utarg;
+    semaforPodnies(sem_id, SEM_MAIN);
 
     usunSemafor(sem_id);
     usunKolejke(kol_id);

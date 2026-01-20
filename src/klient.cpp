@@ -6,9 +6,35 @@
 #include <ctime>
 #include <sys/msg.h>
 #include <signal.h>
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <numeric>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
+
+//rozróżnienie grupy klientów w środku lokalu od tych na zewnątrz
+PamiecDzielona* pam = nullptr;
+int sem_id = -1;
+pid_t g_pid = 0;
+volatile bool g_w_srodku = false;
+
+void handler_ewakuacja(int signum) {
+    if (signum == SIGTERM) {
+        if (g_w_srodku) {
+            std::string ucieczka = "Klient " + std::to_string(g_pid) + ": POŻAR! Uciekam z lokalu";
+            logger(ucieczka);
+
+            if (pam != nullptr && sem_id != -1) {
+                semaforOpusc(sem_id, SEM_MAIN);
+                pam->liczba_klientow--;
+                semaforPodnies(sem_id, SEM_MAIN);
+            }
+        }
+        exit(0);
+    }
+}
 
 bool szansaNaStolik(PamiecDzielona* pam, int wielkosc_grupy) {
     if (wielkosc_grupy == 1) {
@@ -46,8 +72,18 @@ bool szansaNaStolik(PamiecDzielona* pam, int wielkosc_grupy) {
     return false;
 }
 
+void watekOsoby(int id_osoby, int* koszt_dania) {
+    int wybrane_id = (rand() % 10) + 1; //każda osoba z grupy wybiera sobie inne danie z menu
+    *koszt_dania = MENU[wybrane_id];
+}
+
 int main(int argc, char* argv[]) {
-    signal(SIGINT, SIG_IGN);
+    signal(SIGTERM, handler_ewakuacja);
+    g_pid = getpid();
+    int pam_id = polaczPamiec();
+    sem_id = polaczSemafor();
+    int kol_id = polaczKolejke();
+    pam = dolaczPamiec(pam_id);
     srand(time(NULL) ^ getpid());
 
     int wielkosc_grupy = 1;
@@ -55,14 +91,15 @@ int main(int argc, char* argv[]) {
         wielkosc_grupy = std::stoi(argv[1]);
     }
 
-    int pam_id = polaczPamiec();
-    int sem_id = polaczSemafor();
-    int kol_id = polaczKolejke();
-    PamiecDzielona *pam = dolaczPamiec(pam_id);
-
     semaforOpusc(sem_id, SEM_LIMIT); //blokada przed zalaniem baru przez klientów
 
     semaforOpusc(sem_id, SEM_MAIN);
+    if (pam->pozar) {
+        semaforPodnies(sem_id, SEM_MAIN);
+        odlaczPamiec(pam);
+        semaforPodnies(sem_id, SEM_LIMIT);
+        return 0;
+    }
     pam->liczba_klientow++;
     semaforPodnies(sem_id, SEM_MAIN);
 
@@ -79,7 +116,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    //sprawdzanie czy kolejka komunikatów jest przepełniona, jeżeli tak to klient rezygnuje
+    //dodatkowe sprawdzanie czy kolejka komunikatów jest przepełniona, jeżeli tak to klient rezygnuje
     struct msqid_ds stan_kolejki;
     if (msgctl(kol_id, IPC_STAT, &stan_kolejki) == 0) {
         bool stan = (stan_kolejki.msg_qnum >= LIMIT_W_BARZE);
@@ -112,112 +149,63 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    g_w_srodku = true; //klien jest już zaliczany jako ten w barze
+
     //standardowe zachowanie
-    int wybrane_danie = (rand() % 10) + 1; //losowanie dania z menu od 1 do 10
-    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y zamawiamy danie nr " + std::to_string(wybrane_danie));
-    wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0, wybrane_danie);
+    std::vector<std::thread> watki;
+    std::vector<int> koszty(wielkosc_grupy);
+    for (int i = 0; i < wielkosc_grupy; ++i) {
+        watki.emplace_back(watekOsoby, i, &koszty[i]);
+    }
+    for (auto& t : watki) t.join();
 
-    int aktualny_id_stolika = -1;
-    int aktualny_typ_stolika = 0;
+    int suma_zamowienia = std::accumulate(koszty.begin(), koszty.end(), 0);
+    logger("Klient: wchodzę do baru " + std::to_string(wielkosc_grupy) + " osoba/y zamawiamy każdy sobie danie i musimy zapłacić " + std::to_string(suma_zamowienia));
+    //komunikat do kasjera o zamówieniu grupy
+    wyslijKomunikat(kol_id, TYP_KLIENT_KOLEJKA, getpid(), wielkosc_grupy, 0, 0, suma_zamowienia);
 
-    bool obsluzony = false;
+    //odpowiedź od pracownika, dostanie jedzenia i kierowanie się do przydzielonego stolika
     Komunikat odp;
-
-    while (!obsluzony) {
-        semaforOpusc(sem_id, SEM_MAIN);
-        bool czy_pozar = pam-> pozar;
-        semaforPodnies(sem_id, SEM_MAIN);
-        if (czy_pozar) {
-            logger("Klient: Pożar! Uciekam z kolejki");
-            semaforOpusc(sem_id, SEM_MAIN);
-            pam->liczba_klientow--;
-            semaforPodnies(sem_id, SEM_MAIN);
-            odlaczPamiec(pam);
-            semaforPodnies(sem_id, SEM_LIMIT);
-            return 0;
-        }
+    if (odbierzKomunikat(kol_id, getpid(), &odp, true)) {
+        int id_stolika = odp.id_stolika;
+        int typ_stolika = odp.typ_stolika;
+        std::string log = "Klient: " + std::to_string(getpid()) + " dostałem jedzenie i stolik: " + std::to_string(id_stolika) +
+                            " typ: " + std::to_string(typ_stolika) + ", pora jeść";
+        logger(log);
     
-        if (odbierzKomunikat(kol_id, getpid(), &odp, false)) {
-            aktualny_id_stolika = odp.id_stolika;
-            aktualny_typ_stolika = odp.typ_stolika;
-            std::string log = "Klient: " + std::to_string(getpid()) + " dostałem jedzenie i stolik: " + std::to_string(aktualny_id_stolika) +
-                                " typ: " + std::to_string(aktualny_typ_stolika);
-            logger(log);
-            obsluzony = true;
-        }
-        else {
-            usleep(50000);
-        }
-    }
 
-    //jedzenie
-    usleep(8000000 + (rand() % 5000000));
-    semaforOpusc(sem_id, SEM_MAIN);
-    if (pam->pozar) {
-        semaforPodnies(sem_id, SEM_MAIN);
-        logger("Klient: Pożar! Zostawiam naczynia i uciekam");
-        semaforOpusc(sem_id, SEM_MAIN);
-        pam->liczba_klientow--;
-        semaforPodnies(sem_id, SEM_MAIN);
-        odlaczPamiec(pam);
-        semaforPodnies(sem_id, SEM_LIMIT);
-        return 0;
-    }
-    else {
-        semaforPodnies(sem_id, SEM_MAIN);
-    }
+        //symulowanie czasu jedzenia
+        usleep(8000000 + (rand() % 5000000));
 
-    //zwrot naczyń
-    std::string zwrot = "Klient: " + std::to_string(getpid()) + " idę zwrócić naczynia";
-    logger(zwrot);
-    wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 200, 0);
+        //zwrot naczyń
+        std::string zwrot = "Klient: " + std::to_string(getpid()) + " idę zwrócić naczynia";
+        logger(zwrot);
+        wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 200, 0);
 
-    Komunikat potwierdzenie;
-    bool naczynia_oddane = false;
-    while (!naczynia_oddane) {
-        semaforOpusc(sem_id, SEM_MAIN);
-        if (pam->pozar) {
-            semaforPodnies(sem_id, SEM_MAIN);
-            logger("Klient: Pożar! Rzucam naczynia i uciekam");
-            semaforOpusc(sem_id, SEM_MAIN);
-            pam->liczba_klientow--;
-            semaforPodnies(sem_id, SEM_MAIN);
-            odlaczPamiec(pam);
-            semaforPodnies(sem_id, SEM_LIMIT);
-            return 0;
-        }
-        else {
-            semaforPodnies(sem_id, SEM_MAIN);
-        }
+        //potwierdzenie odebrania naczyń
+        odbierzKomunikat(kol_id, getpid(), &odp, true);
 
-        if (odbierzKomunikat(kol_id, getpid(), &potwierdzenie, false)) {
-            naczynia_oddane = true;
-        }
-        else {
-            usleep(50000);
-        }
-    }
 
-    //oddanie stolika
-    if (aktualny_id_stolika != -1) {
+        //oddanie stolika
         semaforOpusc(sem_id, SEM_STOLIKI);
         Stolik *s = nullptr;
-        if (aktualny_typ_stolika == 1) {
-            s = &pam->stoliki_x1[aktualny_id_stolika];
+        if (typ_stolika == 1) {
+            s = &pam->stoliki_x1[id_stolika];
         }
-        else if (aktualny_typ_stolika == 2) {
-            s = &pam->stoliki_x2[aktualny_id_stolika];
+        else if (typ_stolika == 2) {
+            s = &pam->stoliki_x2[id_stolika];
         }
-        else if (aktualny_typ_stolika == 3) {
-            s = &pam->stoliki_x3[aktualny_id_stolika];
+        else if (typ_stolika == 3) {
+            s = &pam->stoliki_x3[id_stolika];
         }
-        else if (aktualny_typ_stolika == 4) {
-            s = &pam->stoliki_x4[aktualny_id_stolika];
+        else if (typ_stolika == 4) {
+            s = &pam->stoliki_x4[id_stolika];
         }
 
         if (s != nullptr) {
             s->ile_zajetych_miejsc -= wielkosc_grupy;
             if (s->ile_zajetych_miejsc == 0) {
+                s->ile_zajetych_miejsc = 0;
                 s->wielkosc_grupy_siedzacej = 0;
             }
             semaforPodnies(sem_id, SEM_STOLIKI);
@@ -229,7 +217,7 @@ int main(int argc, char* argv[]) {
             semaforPodnies(sem_id, SEM_STOLIKI);
         }
     }
-    usleep(10000);
+    g_w_srodku = false;
 
     semaforOpusc(sem_id, SEM_MAIN);
     pam->liczba_klientow--;

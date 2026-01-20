@@ -55,7 +55,7 @@ void semaforPodnies(int sem_id, int sem_num) { //V
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = 1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -72,7 +72,7 @@ void semaforOpusc(int sem_id, int sem_num) { //P
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = -1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -175,8 +175,12 @@ void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_sto
     kom.typ_stolika = typ_stolika;
     kom.id_stolika = id_stolika;
     kom.id_dania = id_dania;
-    if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+    while (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
+        break;
     }
 }
 
