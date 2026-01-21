@@ -42,6 +42,9 @@ struct PamiecDzielona {
     Stolik stoliki_x3[STOLIKI_X3];
     Stolik stoliki_x4[STOLIKI_X4];
 
+    pid_t pgid_grupy;
+    pid_t pracownik_pid;
+
     bool pozar;
     bool podwojenie_X3;
     bool blokada_rezerwacyjna;
@@ -56,10 +59,10 @@ const long TYP_PRACOWNIK = 2;
 struct Komunikat {
     long mtype;
     pid_t nadawca;
-    int dane;
+    int dane;       //wielkość grupy lub ilość rezerwacji
     int id_stolika;
     int typ_stolika;
-    int id_dania;
+    int id_dania;   //suma cen lub kod polecenia
 };
 const int ROZMIAR_KOM = sizeof(Komunikat) - sizeof(long);
 

@@ -55,7 +55,7 @@ void semaforPodnies(int sem_id, int sem_num) { //V
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = 1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -72,7 +72,7 @@ void semaforOpusc(int sem_id, int sem_num) { //P
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = -1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -87,7 +87,7 @@ void semaforOpusc(int sem_id, int sem_num) { //P
 
 int polaczSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 0, 0600);
+    int sem_id = semget(klucz, 0, 0);
     if (sem_id == -1) {
         perror("Błąd połączenia semafora(semget)");
         exit(1);
@@ -175,8 +175,12 @@ void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_sto
     kom.typ_stolika = typ_stolika;
     kom.id_stolika = id_stolika;
     kom.id_dania = id_dania;
-    if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+    while (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
+        break;
     }
 }
 
@@ -186,8 +190,17 @@ bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj) {
         flaga = IPC_NOWAIT;
     }
 
-    if (msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga) != -1) {
-        return true;
+    while (true) {
+        ssize_t result = msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga);
+        if (result != -1) {
+            return true;
+        }
+        if (errno == EINTR) {
+            if (!czekaj) {
+                return false;
+            }
+            continue;
+        }
+        return false;
     }
-    return false;
 }
