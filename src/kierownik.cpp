@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/sem.h>
+#include <signal.h>
 #include <cerrno>
 #include "operacje.h"
 #include "struktury.h"
@@ -43,17 +44,19 @@ void stanStolikow(PamiecDzielona *pam) {
     std::cout << "4 osobowe: " << wolne_X4 << "/" << STOLIKI_X4 << std::endl;
 }
 
-void bladWejscia(const char* komunikat) {
-    std::cout << "\033[31m[błąd danych]: " << komunikat << "\033[0m" << std::endl;
-    std::cin.clear();
-    std::cin.ignore(1000, '\n');
-}
-
 int main() {
     int sem_id = polaczSemafor();
-    int kol_id = polaczKolejke();
     int pam_id = polaczPamiec();
     PamiecDzielona *pam = dolaczPamiec(pam_id);
+
+    std::cout << "Kierownik: Potrzebuję pracownika żeby działać" << std::endl;
+    while (pam->pracownik_pid == 0) {
+        usleep(100000);
+    }
+    semaforOpusc(sem_id, SEM_MAIN);
+    pid_t pracownik_pid = pam->pracownik_pid;
+    semaforPodnies(sem_id, SEM_MAIN);
+    std::cout << "Kierownik: Pracownik się pojawił: " << pracownik_pid << std::endl;
 
     semaforOpusc(sem_id, SEM_STOLIKI);
     stanStolikow(pam);
@@ -62,86 +65,47 @@ int main() {
     int wybor;
     while (true) {
         std::cout << "Opcje Kierownika" << std::endl;
-        std::cout << "1 - podwojenie liczby stolików X3" << std::endl;
-        std::cout << "2 - rezerwacja stolików" << std::endl;
-        std::cout << "3 - pożar i ewakuacja" << std::endl;
+        std::cout << "1 - podwojenie liczby stolików X3 (SIGUSR1)" << std::endl;
+        std::cout << "2 - rezerwacja stałej wartości stolików (SIGUSR2)" << std::endl;
+        std::cout << "3 - pożar i ewakuacja (SIGTERM)" << std::endl;
         std::cout << "4 - aktualny stan stolików" << std::endl;
+        std::cout << "0 - wyjście" << std::endl;
 
-        std::cout << "Podaj numer sygnału: ";
+        std::cout << "Podaj wybraną opcję: ";
 
-        while (!(std::cin >> wybor)) {
+        if (!(std::cin >> wybor)) {
             std::cout << "niepoprawne dane wejściowe: ";
             std::cin.clear();
             std::cin.ignore(1000, '\n');
+            continue;
         }
         
         if (wybor == 1) {
-            logger("Kierownik: Wysyłam do pracownika rozkaz podwojenia liczby stolików X3");
-            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), 0, 0, 101, 0);
+            logger("Kierownik: Wysyłam do pracownika SIGUSR1 - rozkaz podwojenia liczby stolików X3");
+            kill(pracownik_pid, SIGUSR1);
         }
 
         else if (wybor == 2) {
-            int typ_stolika;
-            int ilosc;
-
-            while (1) {
-                std::cout << "Jaki typ stolika zarezerować (1, 2, 3, 4): ";
-                if (!(std::cin >> typ_stolika)) {
-                    bladWejscia("to nie jest liczba");
-                    continue;
-                }
-                if (typ_stolika < 1 || typ_stolika > 4) {
-                    bladWejscia("nie ma takiego typu stolika");
-                    continue;
-                }
-
-                std::cout << "Ile stolików typu " + std::to_string(typ_stolika) << " zarezerować: ";
-                if (!(std::cin >> ilosc)) {
-                    bladWejscia("to nie jest liczba");
-                    continue;
-                }
-                if (ilosc < 0) {
-                    bladWejscia("ilość musi być >= 0");
-                    continue;
-                }
-                break;
-            }
-
-            std::string kom = "Kierownik: wsyłam polecenie rezerwacji " + std::to_string(ilosc) + " stolików typu " + std::to_string(typ_stolika);
-            logger(kom);
-            wyslijKomunikat(kol_id, TYP_PRACOWNIK, getpid(), ilosc, typ_stolika, 102, 0);
-            usleep(500000);
+            logger("Kierownik: Wysyłam do pracownika SIGUSR2 - rezerwację ustaloną w kodzie pracownika");
+            kill(pracownik_pid, SIGUSR2);
         }
 
         else if (wybor == 3) {
+            logger("Kierownik: Ogłaszam pożar i ewakuację!");
             semaforOpusc(sem_id, SEM_MAIN);
             pam->pozar = true;
+            pid_t gid = pam->pgid_grupy;
             semaforPodnies(sem_id, SEM_MAIN);
-            logger("Kierownik: Ogłaszam pożar i ewakuację!");
 
-            while (true) {
-                struct sembuf operacje;
-                operacje.sem_num = SEM_MAIN;
-                operacje.sem_op = -1;
-                operacje.sem_flg = 0;
+            kill(pracownik_pid, SIGTERM);
 
-                if (semop(sem_id, &operacje, 1) == -1) {
-                    if (errno == EIDRM || errno == EINVAL) {
-                        break;
-                    }
-                }
-
-                int pozostalo = pam->liczba_klientow;
-
-                operacje.sem_op = 1;
-                semop(sem_id, &operacje, 1);
-
-                if (pozostalo <= 0) {
-                    break;
-                }
-                usleep(500000);
+            if (gid > 0) {
+                kill(-gid, SIGTERM);
             }
-            logger("Kierownik: Lokal pusty, uciekam i zamykam bar");
+
+            //oczekiwanie na ewakuację pracownika żeby zakończyć kierownika
+            semaforOpuscBezUndo(sem_id, SEM_EWAK_PRACOWNIK_DONE);
+            logger("Kierownik: Lokal pusty, wszyscy ewakuowani. Uciekam i zamykam");
             break;
         }
 
@@ -151,6 +115,10 @@ int main() {
             semaforPodnies(sem_id, SEM_STOLIKI);
         }
 
+        else if (wybor == 0) {
+            break;
+        }
+        
         else {
             std::cout << "nie ma takiej opcji";
             continue;

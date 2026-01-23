@@ -4,9 +4,54 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include <atomic>
+#include <sys/msg.h>
+#include <cerrno>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
+
+volatile sig_atomic_t ewakuacja = 0;
+
+void handler_kasjer(int signum) {
+    if (signum == SIGTERM) {
+        ewakuacja = 1;
+    }
+}
+
+//customowe wysyłanie komunikatów dla kasjera żeby nie zaciął się w razie pożaru przy specjalnie przepełnionej kolejce komunikatów
+static bool wyslij_komunikat_przerywalnie(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania,
+                                         PamiecDzielona* pam) {
+    Komunikat kom;
+    kom.mtype = mtyp;
+    kom.nadawca = nadawca;
+    kom.dane = dane;
+    kom.typ_stolika = typ_stolika;
+    kom.id_stolika = id_stolika;
+    kom.id_dania = id_dania;
+
+    while (true) {
+        if (ewakuacja || (pam != nullptr && pam->pozar)) {
+            return false;
+        }
+
+        if (msgsnd(kol_id, &kom, ROZMIAR_KOM, IPC_NOWAIT) == 0) {
+            return true;
+        }
+
+        if (errno == EINTR) {
+            continue;
+        }
+
+        if (errno == EAGAIN) {
+            usleep(2000);
+            continue;
+        }
+
+        perror("Nieudana próba wysłania wiadomości (kasjer msgsnd)");
+        return false;
+    }
+}
 
 struct Klient {
     pid_t pid;
@@ -38,7 +83,12 @@ int sprobujZnalezcMiejsce(Stolik* tablica, int liczba_stolikow, int wielkosc_gru
 }
 
 int main() {
-    signal(SIGINT, SIG_IGN);
+    struct sigaction sa;
+    sa.sa_handler = handler_kasjer;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGTERM, &sa, NULL);
+
     int kol_id = polaczKolejke();
     int sem_id = polaczSemafor();
     int pam_id = polaczPamiec();
@@ -50,17 +100,27 @@ int main() {
     Komunikat kom;
 
     while (true) {
+        //ewakuacja priorytetowa
+        semaforOpusc(sem_id, SEM_MAIN);
+        if (pam->pozar) {
+            ewakuacja = 1;
+        }
+        semaforPodnies(sem_id, SEM_MAIN);
+
+        if (ewakuacja) {
+            semaforCzekajNaZero(sem_id, SEM_W_BARZE);
+            logger("Kasjer: Wszyscy klienci ewakuowani. Zamykam kasę i uciekam.");
+            semaforPodniesBezUndo(sem_id, SEM_EWAK_KASJER_DONE);
+            break;
+        }
+
+
         //przerwa w przyjmowaniu klientów na czas rezerwacji przez pracownika
         semaforOpusc(sem_id, SEM_MAIN);
         if (pam->blokada_rezerwacyjna) {
-            if (!pam->pozar) {
-                semaforPodnies(sem_id, SEM_MAIN);
-                usleep(100000);
-                continue;
-            }
-            else {
-                semaforPodnies(sem_id, SEM_MAIN);
-            }
+            semaforPodnies(sem_id, SEM_MAIN);
+            usleep(50000);
+            continue;
         }
         else {
             semaforPodnies(sem_id, SEM_MAIN);
@@ -68,47 +128,36 @@ int main() {
 
         //odbieranie klientów w kolejce do kasy
         while (odbierzKomunikat(kol_id, TYP_KLIENT_KOLEJKA, &kom, false)) {
+            if (ewakuacja) break;
+
             Klient nowy;
             nowy.pid = kom.nadawca;
             nowy.wielkosc_grupy = kom.dane;
             kolejka.push_back(nowy);
 
-            int id_dania = kom.id_dania;
-            int ilosc = kom.dane;
-            int cena_sztuki = MENU[id_dania];
-            int wartosc_zamowienia = cena_sztuki * ilosc;
+            int wartosc_zamowienia = kom.id_dania;
+            
             semaforOpusc(sem_id, SEM_MAIN);
             pam->utarg += wartosc_zamowienia;
+            if (pam->pozar) {
+                ewakuacja = 1;
+            }
             semaforPodnies(sem_id, SEM_MAIN);
-            std::string log = "Kasjer: mam klienta: " + std::to_string(nowy.pid) +
-                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, danie nr: " +
-                                std::to_string(id_dania) + " (Utarg + " + std::to_string(wartosc_zamowienia) + ")";
-            logger(log);
+
+            if (!ewakuacja) {
+                logger("Kasjer: mam klienta: " + std::to_string(nowy.pid) +
+                                    " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, zapłacił " +
+                                    std::to_string(wartosc_zamowienia));
+            }
         }
 
-        semaforOpusc(sem_id, SEM_MAIN);
-        if (pam->pozar) {
-            semaforPodnies(sem_id, SEM_MAIN);
-            logger("Kasjer: Pożar! Ewakuacja klientów!");
-            while (true) {
-                semaforOpusc(sem_id, SEM_MAIN);
-                int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
-                if (pozostalo <= 0) {
-                    break;
-                }
-                usleep(100000);
-            }
-            logger("Kasjer: Wszyscy klienci ewakuowani, zamykam kasę i uciekam");
-            break;
-        }
-        else {
-            semaforPodnies(sem_id, SEM_MAIN);
-        }
+        if(ewakuacja) continue;
     
         //szukanie odpowiedniego stolika dla klienta i powiadomienie o tym pracownika jeżeli się znalazło
         if (!kolejka.empty()) {
             for (size_t i = 0; i < kolejka.size(); i++) {
+                if (ewakuacja) break;
+
                 Klient k = kolejka[i];
                 int przypisane_id = -1;
                 int przypisany_typ = 0;
@@ -150,10 +199,17 @@ int main() {
 
                 semaforPodnies(sem_id, SEM_STOLIKI);
 
+                semaforOpusc(sem_id, SEM_MAIN);
+                if (pam->pozar) {
+                    ewakuacja = 1;
+                }
+                semaforPodnies(sem_id, SEM_MAIN);
+
                 if (przypisane_id != -1) {
-                    std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
-                    logger(log);
-                    wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                    if (!ewakuacja) {
+                        logger("Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid));
+                        (void)wyslij_komunikat_przerywalnie(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0, pam);
+                    }
                     kolejka.erase(kolejka.begin() + i);
                     break;
                 }

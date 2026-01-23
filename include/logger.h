@@ -5,7 +5,7 @@
 
 #include <string>
 
-void logger(std::string wiadomosc);
+void logger(const std::string& wiadomosc);
 void tabula_rasa();
 
 #endif

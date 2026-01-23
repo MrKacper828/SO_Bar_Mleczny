@@ -12,12 +12,16 @@ const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
 const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
-const int SEM_MAIN = 0; //semafor od reszty
+const int SEM_MAIN = 0; //semafor od reszty zasobów pamięci dzielonej
 const int SEM_STOLIKI = 1; //semafor od stolików
 const int SEM_LIMIT = 2; //semafor do tworzenia klientów
+//semafory do synchronizacji ewakuacji
+const int SEM_W_BARZE = 3; //liczba klientów w lokalu
+const int SEM_EWAK_KASJER_DONE = 4; //kasjer zamknął kasę i uciekł
+const int SEM_EWAK_PRACOWNIK_DONE = 5; //pracownik uciekł po kasjerze
 
 const int ILOSC_KLIENTOW = 10000; //ilość tworzonych procesów klientów
-const int LIMIT_W_BARZE = 100; //limit klientów w barze
+const int LIMIT_W_BARZE = 100; //limit klientów w barze (dokładniej w kolejce komunikatów do kasjera)
 
 //max ilość stolików w restauracji
 const int STOLIKI_X1 = 8;
@@ -42,6 +46,9 @@ struct PamiecDzielona {
     Stolik stoliki_x3[STOLIKI_X3];
     Stolik stoliki_x4[STOLIKI_X4];
 
+    pid_t pgid_grupy;
+    pid_t pracownik_pid;
+
     bool pozar;
     bool podwojenie_X3;
     bool blokada_rezerwacyjna;
@@ -56,10 +63,10 @@ const long TYP_PRACOWNIK = 2;
 struct Komunikat {
     long mtype;
     pid_t nadawca;
-    int dane;
+    int dane;       //wielkość grupy lub ilość rezerwacji
     int id_stolika;
     int typ_stolika;
-    int id_dania;
+    int id_dania;   //suma cen lub kod polecenia
 };
 const int ROZMIAR_KOM = sizeof(Komunikat) - sizeof(long);
 

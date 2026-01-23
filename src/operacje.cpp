@@ -24,7 +24,7 @@ key_t stworzKlucz(int klucz_struktury) {
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 3, IPC_CREAT | 0600);
+    int sem_id = semget(klucz, 6, IPC_CREAT | 0600);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
@@ -42,6 +42,18 @@ int utworzSemafor() {
         perror("Błąd ustawinia semafora limitu(semctl SETVAL)");
         exit(1);
     }
+    if (semctl(sem_id, SEM_W_BARZE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora w barze(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_EWAK_KASJER_DONE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora ewakuacji kasjer(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_EWAK_PRACOWNIK_DONE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora ewakuacji pracownik(semctl SETVAL)");
+        exit(1);
+    }
     return sem_id;
 }
 
@@ -55,7 +67,7 @@ void semaforPodnies(int sem_id, int sem_num) { //V
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = 1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -68,11 +80,26 @@ void semaforPodnies(int sem_id, int sem_num) { //V
     }
 }
 
+void semaforPodniesBezUndo(int sem_id, int sem_num) { //V do ewakuacji bez SEM_UNDO
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = 1;
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd poniesienia semafora bez undo(semop 1)");
+        break;
+    }
+}
+
 void semaforOpusc(int sem_id, int sem_num) { //P
     struct sembuf operacje;
     operacje.sem_num = sem_num;
     operacje.sem_op = -1;
-    operacje.sem_flg = 0;
+    operacje.sem_flg = SEM_UNDO;
 
     while (semop(sem_id, &operacje, 1) == -1) {
         if (errno == EINTR) {
@@ -85,9 +112,39 @@ void semaforOpusc(int sem_id, int sem_num) { //P
     }
 }
 
+void semaforOpuscBezUndo(int sem_id, int sem_num) { //P do ewakuacji bez SEM_UNDO
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = -1;
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd opuszczenia semafora bez undo(semop -1)");
+        break;
+    }
+}
+
+void semaforCzekajNaZero(int sem_id, int sem_num) { //do ewakuacji żeby kasjer i pracownik wyszli po klientach
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = 0; //blokuje do 0
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd oczekiwania na zero semafora(semop 0)");
+        break;
+    }
+}
+
 int polaczSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 0, 0600);
+    int sem_id = semget(klucz, 0, 0);
     if (sem_id == -1) {
         perror("Błąd połączenia semafora(semget)");
         exit(1);
@@ -175,8 +232,12 @@ void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_sto
     kom.typ_stolika = typ_stolika;
     kom.id_stolika = id_stolika;
     kom.id_dania = id_dania;
-    if (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+    while (msgsnd(kol_id, &kom, ROZMIAR_KOM, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
+        break;
     }
 }
 
@@ -186,8 +247,17 @@ bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj) {
         flaga = IPC_NOWAIT;
     }
 
-    if (msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga) != -1) {
-        return true;
+    while (true) {
+        ssize_t result = msgrcv(kol_id, buf, ROZMIAR_KOM, mtyp, flaga);
+        if (result != -1) {
+            return true;
+        }
+        if (errno == EINTR) {
+            if (!czekaj) {
+                return false;
+            }
+            continue;
+        }
+        return false;
     }
-    return false;
 }
