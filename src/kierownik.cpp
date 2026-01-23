@@ -98,19 +98,13 @@ int main() {
             semaforPodnies(sem_id, SEM_MAIN);
 
             kill(pracownik_pid, SIGTERM);
-            usleep(10000);
 
             if (gid > 0) {
                 kill(-gid, SIGTERM);
             }
 
-            logger("Kierownik: Czekam aż wszyscy bezpiecznie opuszczą bar");
-
-            while (kill(pracownik_pid, 0) == 0) {
-                usleep(100000);
-            }
-
-            usleep(200000);
+            //oczekiwanie na ewakuację pracownika żeby zakończyć kierownika
+            semaforOpuscBezUndo(sem_id, SEM_EWAK_PRACOWNIK_DONE);
             logger("Kierownik: Lokal pusty, wszyscy ewakuowani. Uciekam i zamykam");
             break;
         }

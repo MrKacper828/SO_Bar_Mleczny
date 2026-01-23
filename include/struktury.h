@@ -12,12 +12,16 @@ const int KLUCZ_PD = 'P'; //klucz dla pamięci dzielonej
 const int KLUCZ_SEM = 'S'; //klucz dla semafora
 const int KLUCZ_KOL = 'K'; //klucz dla kolejek
 
-const int SEM_MAIN = 0; //semafor od reszty
+const int SEM_MAIN = 0; //semafor od reszty zasobów pamięci dzielonej
 const int SEM_STOLIKI = 1; //semafor od stolików
 const int SEM_LIMIT = 2; //semafor do tworzenia klientów
+//semafory do synchronizacji ewakuacji
+const int SEM_W_BARZE = 3; //liczba klientów w lokalu
+const int SEM_EWAK_KASJER_DONE = 4; //kasjer zamknął kasę i uciekł
+const int SEM_EWAK_PRACOWNIK_DONE = 5; //pracownik uciekł po kasjerze
 
 const int ILOSC_KLIENTOW = 10000; //ilość tworzonych procesów klientów
-const int LIMIT_W_BARZE = 100; //limit klientów w barze
+const int LIMIT_W_BARZE = 100; //limit klientów w barze (dokładniej w kolejce komunikatów do kasjera)
 
 //max ilość stolików w restauracji
 const int STOLIKI_X1 = 8;

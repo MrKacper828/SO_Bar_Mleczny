@@ -11,6 +11,9 @@ int utworzSemafor();
 void usunSemafor(int sem_id);
 void semaforPodnies(int sem_id, int sem_num); //V
 void semaforOpusc(int sem_id,int sem_num); //P
+void semaforCzekajNaZero(int sem_id, int sem_num); //czekanie na klientów
+void semaforPodniesBezUndo(int sem_id, int sem_num); //V do ewakuacji
+void semaforOpuscBezUndo(int sem_id, int sem_num);   //P do ewakuacji
 int polaczSemafor();
 
 //pamięć dzielona

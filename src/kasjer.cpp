@@ -63,18 +63,17 @@ int main() {
     Komunikat kom;
 
     while (true) {
-        if (ewakuacja) {
-            while (true) {
-                semaforOpusc(sem_id, SEM_MAIN);
-                int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
+        //ewakuacja priorytetowa
+        semaforOpusc(sem_id, SEM_MAIN);
+        if (pam->pozar) {
+            ewakuacja = 1;
+        }
+        semaforPodnies(sem_id, SEM_MAIN);
 
-                if (pozostalo <= 0) {
-                    break;
-                }
-                usleep(50000);
-            }
-            logger("Kasjer: Wszyscy klienci ewakuaowani. Zamykam kasę i uciekam.");
+        if (ewakuacja) {
+            semaforCzekajNaZero(sem_id, SEM_W_BARZE);
+            logger("Kasjer: Wszyscy klienci ewakuowani. Zamykam kasę i uciekam.");
+            semaforPodniesBezUndo(sem_id, SEM_EWAK_KASJER_DONE);
             break;
         }
 
@@ -103,11 +102,16 @@ int main() {
             
             semaforOpusc(sem_id, SEM_MAIN);
             pam->utarg += wartosc_zamowienia;
+            if (pam->pozar) {
+                ewakuacja = 1;
+            }
             semaforPodnies(sem_id, SEM_MAIN);
-            std::string log = "Kasjer: mam klienta: " + std::to_string(nowy.pid) +
-                                " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, zapłacił " +
-                                std::to_string(wartosc_zamowienia);
-            logger(log);
+
+            if (!ewakuacja) {
+                logger("Kasjer: mam klienta: " + std::to_string(nowy.pid) +
+                                    " grupa " + std::to_string(nowy.wielkosc_grupy) + " osobowa, zapłacił " +
+                                    std::to_string(wartosc_zamowienia));
+            }
         }
 
         if(ewakuacja) continue;
@@ -158,10 +162,17 @@ int main() {
 
                 semaforPodnies(sem_id, SEM_STOLIKI);
 
+                semaforOpusc(sem_id, SEM_MAIN);
+                if (pam->pozar) {
+                    ewakuacja = 1;
+                }
+                semaforPodnies(sem_id, SEM_MAIN);
+
                 if (przypisane_id != -1) {
-                    std::string log = "Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid);
-                    logger(log);
-                    wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                    if (!ewakuacja) {
+                        logger("Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid));
+                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                    }
                     kolejka.erase(kolejka.begin() + i);
                     break;
                 }

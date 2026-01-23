@@ -23,7 +23,10 @@ void handler_sygnalow(int signum) {
         flaga_rezerwacja = 1;
     }
     else if (signum == SIGTERM) {
+        //pożar z priorytetem
         flaga_pozar = 1;
+        flaga_podwojenie = 0;
+        flaga_rezerwacja = 0;
     }
 }
 
@@ -50,21 +53,20 @@ int main() {
 
     Komunikat zamowienie;
     while (true) {
+        //ewakuacja ponad inne czynności
+        semaforOpusc(sem_id, SEM_MAIN);
+        if (pam->pozar) {
+            flaga_pozar = 1;
+            flaga_podwojenie = 0;
+            flaga_rezerwacja = 0;
+        }
+        semaforPodnies(sem_id, SEM_MAIN);
+
         if (flaga_pozar) {
-            logger("Pracownik: Otrzymałem od Kierownika sygnał Pożar. Ewakuacja");
-
-            while(true) {
-                semaforOpusc(sem_id, SEM_MAIN);
-                int pozostalo = pam->liczba_klientow;
-                semaforPodnies(sem_id, SEM_MAIN);
-
-                if (pozostalo <= 0) {
-                    break;
-                }
-                usleep(50000);
-            }
-            usleep(200000);
+            semaforCzekajNaZero(sem_id, SEM_W_BARZE);
+            semaforOpuscBezUndo(sem_id, SEM_EWAK_KASJER_DONE);
             logger("Pracownik: Pusto. Uciekam po Kasjerze");
+            semaforPodniesBezUndo(sem_id, SEM_EWAK_PRACOWNIK_DONE);
             break;
         }
 
@@ -78,11 +80,15 @@ int main() {
                 semaforOpusc(sem_id, SEM_STOLIKI);
                 pam->aktualna_liczba_X3 = STOLIKI_X3;
                 semaforPodnies(sem_id, SEM_STOLIKI);
-                logger("Pracownik: Wykonałem polecenie podwojenia liczby stolików X3");
+                if (!flaga_pozar) {
+                    logger("Pracownik: Wykonałem polecenie podwojenia liczby stolików X3");
+                }
             }
             else {
                 semaforPodnies(sem_id, SEM_MAIN);
-                logger("Pracownik: Nie mogę podwoić liczby stolików X3, bo już to zrobiłem wcześniej");
+                if (!flaga_pozar) {
+                    logger("Pracownik: Nie mogę podwoić liczby stolików X3, bo już to zrobiłem wcześniej");
+                }
             }
         }
 
@@ -104,10 +110,14 @@ int main() {
             int ilosc_do_wykonania = std::min(chciana_ilosc, dostepne_do_rezerwacji);
 
             if (ilosc_do_wykonania == 0) {
-                logger("Pracownik (SIGUSR2): Brak wolnych stolików do rezerwacji");
+                if (!flaga_pozar) {
+                    logger("Pracownik (SIGUSR2): Brak wolnych stolików do rezerwacji");
+                }
             }
             else {
-                logger("Pracownik (SIGUSR2): Rezerwuję " + std::to_string(ilosc_do_wykonania) + " stolików typu " + std::to_string(typ_rez));
+                if (!flaga_pozar) {
+                    logger("Pracownik (SIGUSR2): Rezerwuję " + std::to_string(ilosc_do_wykonania) + " stolików typu " + std::to_string(typ_rez));
+                }
 
                 semaforOpusc(sem_id, SEM_MAIN);
                 pam->blokada_rezerwacyjna = true;
@@ -115,6 +125,14 @@ int main() {
 
                 int zarezerwowano = 0;
                 while (zarezerwowano < ilosc_do_wykonania) {
+                    semaforOpusc(sem_id, SEM_MAIN);
+                    if (pam->pozar) {
+                        flaga_pozar = 1;
+                        flaga_podwojenie = 0;
+                        flaga_rezerwacja = 0;
+                    }
+                    semaforPodnies(sem_id, SEM_MAIN);
+
                     if (flaga_pozar) {
                         break;
                     }
@@ -134,6 +152,17 @@ int main() {
                     //obsługa klientów chcących dostać jedzenie i tych oddających talerze w trakcie rezerwacji
                     if (zarezerwowano < ilosc_do_wykonania) {
                         while (msgrcv(kol_id, &zamowienie, ROZMIAR_KOM, TYP_PRACOWNIK, IPC_NOWAIT) != -1) {
+                            semaforOpusc(sem_id, SEM_MAIN);
+                            if (pam->pozar) {
+                                flaga_pozar = 1;
+                                flaga_podwojenie = 0;
+                                flaga_rezerwacja = 0;
+                            }
+                            semaforPodnies(sem_id, SEM_MAIN);
+
+                            if (flaga_pozar) {
+                                break;
+                            }
                             if (zamowienie.id_stolika == 200) {
                                 wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0);
                             }
@@ -166,14 +195,30 @@ int main() {
             }
         }
 
+        semaforOpusc(sem_id, SEM_MAIN);
+        if (pam->pozar) {
+            flaga_pozar = 1;
+            flaga_podwojenie = 0;
+            flaga_rezerwacja = 0;
+        }
+        semaforPodnies(sem_id, SEM_MAIN);
+
+        if (flaga_pozar) {
+            continue;
+        }
+
         int kod_polecenia = zamowienie.id_stolika;
 
         if (kod_polecenia == 200) {
-            logger("Pracownik: Odbieram naczynia od " + std::to_string(zamowienie.nadawca));
+            if (!flaga_pozar) {
+                logger("Pracownik: Odbieram naczynia od " + std::to_string(zamowienie.nadawca));
+            }
             wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0);
         }
         else if (kod_polecenia < 100) {
-            logger("Pracownik: Wydaję posiłek dla " + std::to_string(zamowienie.nadawca) + " (stolik " + std::to_string(kod_polecenia) + ")");
+            if (!flaga_pozar) {
+                logger("Pracownik: Wydaję posiłek dla " + std::to_string(zamowienie.nadawca) + " (stolik " + std::to_string(kod_polecenia) + ")");
+            }
             wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 1, zamowienie.typ_stolika, kod_polecenia, 0);
         }
     }

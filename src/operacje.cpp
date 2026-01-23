@@ -24,7 +24,7 @@ key_t stworzKlucz(int klucz_struktury) {
 //semafor
 int utworzSemafor() {
     key_t klucz = stworzKlucz(KLUCZ_SEM);
-    int sem_id = semget(klucz, 3, IPC_CREAT | 0600);
+    int sem_id = semget(klucz, 6, IPC_CREAT | 0600);
     if (sem_id == -1) {
         perror("Błąd tworzenia semafora(semget IPC_CREAT)");
         exit(1);
@@ -40,6 +40,18 @@ int utworzSemafor() {
     }
     if (semctl(sem_id, SEM_LIMIT, SETVAL, LIMIT_W_BARZE) == -1) {
         perror("Błąd ustawinia semafora limitu(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_W_BARZE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora w barze(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_EWAK_KASJER_DONE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora ewakuacji kasjer(semctl SETVAL)");
+        exit(1);
+    }
+    if (semctl(sem_id, SEM_EWAK_PRACOWNIK_DONE, SETVAL, 0) == -1) {
+        perror("Błąd ustawinia semafora ewakuacji pracownik(semctl SETVAL)");
         exit(1);
     }
     return sem_id;
@@ -68,6 +80,21 @@ void semaforPodnies(int sem_id, int sem_num) { //V
     }
 }
 
+void semaforPodniesBezUndo(int sem_id, int sem_num) { //V do ewakuacji bez SEM_UNDO
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = 1;
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd poniesienia semafora bez undo(semop 1)");
+        break;
+    }
+}
+
 void semaforOpusc(int sem_id, int sem_num) { //P
     struct sembuf operacje;
     operacje.sem_num = sem_num;
@@ -82,6 +109,36 @@ void semaforOpusc(int sem_id, int sem_num) { //P
             perror("Błąd opuszczenia semafora(semop -1)");
             break;
         }
+    }
+}
+
+void semaforOpuscBezUndo(int sem_id, int sem_num) { //P do ewakuacji bez SEM_UNDO
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = -1;
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd opuszczenia semafora bez undo(semop -1)");
+        break;
+    }
+}
+
+void semaforCzekajNaZero(int sem_id, int sem_num) { //do ewakuacji żeby kasjer i pracownik wyszli po klientach
+    struct sembuf operacje;
+    operacje.sem_num = sem_num;
+    operacje.sem_op = 0; //blokuje do 0
+    operacje.sem_flg = 0;
+
+    while (semop(sem_id, &operacje, 1) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+        perror("Błąd oczekiwania na zero semafora(semop 0)");
+        break;
     }
 }
 
