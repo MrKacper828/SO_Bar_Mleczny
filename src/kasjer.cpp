@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <atomic>
+#include <sys/msg.h>
+#include <cerrno>
 #include "operacje.h"
 #include "struktury.h"
 #include "logger.h"
@@ -16,6 +18,41 @@ void handler_kasjer(int signum) {
         ewakuacja = 1;
     }
 }
+
+//customowe wysyłanie komunikatów dla kasjera żeby nie zaciął się w razie pożaru przy specjalnie przepełnionej kolejce komunikatów
+static bool wyslij_komunikat_przerywalnie(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania,
+                                         PamiecDzielona* pam) {
+    Komunikat kom;
+    kom.mtype = mtyp;
+    kom.nadawca = nadawca;
+    kom.dane = dane;
+    kom.typ_stolika = typ_stolika;
+    kom.id_stolika = id_stolika;
+    kom.id_dania = id_dania;
+
+    while (true) {
+        if (ewakuacja || (pam != nullptr && pam->pozar)) {
+            return false;
+        }
+
+        if (msgsnd(kol_id, &kom, ROZMIAR_KOM, IPC_NOWAIT) == 0) {
+            return true;
+        }
+
+        if (errno == EINTR) {
+            continue;
+        }
+
+        if (errno == EAGAIN) {
+            usleep(2000);
+            continue;
+        }
+
+        perror("Nieudana próba wysłania wiadomości (kasjer msgsnd)");
+        return false;
+    }
+}
+
 struct Klient {
     pid_t pid;
     int wielkosc_grupy;
@@ -171,7 +208,7 @@ int main() {
                 if (przypisane_id != -1) {
                     if (!ewakuacja) {
                         logger("Kasjer: Przypisano stolik " + std::to_string(przypisane_id) + " typu: " + std::to_string(przypisany_typ) + " dla: " + std::to_string(k.pid));
-                        wyslijKomunikat(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0);
+                        (void)wyslij_komunikat_przerywalnie(kol_id, TYP_PRACOWNIK, k.pid, k.wielkosc_grupy, przypisany_typ, przypisane_id, 0, pam);
                     }
                     kolejka.erase(kolejka.begin() + i);
                     break;
