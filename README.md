@@ -147,7 +147,7 @@ c) Duża ilość klientów i klientów zombie:
 **Ważny detal w testach**: Zmiany do testów odnoszą się zawsze do podstawowej wersji programu z takimi wartościami jakie znajdują się na githubie.
 
 <details>
-<summary> **1. Test1: Przerwanie spożywania posiłku sygnałem ewakuacja** </summary>
+<summary> <strong>1. Test1: Przerwanie spożywania posiłku sygnałem ewakuacja</strong> </summary>
 
 Opis testu:  Test polega na zmianie czasu jedzenia na bardzo długi, np. 30 sekund. Następnie wpuszczamy do baru 10 klientów i czekamy aż w logach pojawi się, że cała 10 zacznie spożywać posiłek. Uruchamiamy wtedy sygnał 3 od Kierownika i rozpoczynamy ewakuację. Wszyscy klienci powinni niemal natychmiast przerwać jedzenie i się ewakuować.
 
@@ -285,7 +285,7 @@ Trudno to przedstawić na logach, ale czas od naciśnięcia sygnału ewakuacji d
 ---
 
 <details>
-<summary> **2. Test2:Rezerwacja w pełnym lokalu** </summary>
+<summary> <strong>2. Test2:Rezerwacja w pełnym lokalu</strong> </summary>
 
 Opis testu: Sprawdzenie czy pracownik poradzi sobie kiedy jest pełne obłożenie w lokalu, klienci bardzo długo jedzą, a on musi wykonać rozkaz rezerwacji stolika. Kiedy logi symulacji staną przez czas jedzenia klientów należy wysłać sygnał rezerwacji i zobaczyć czy symulacja sobie z tym poradzi i się nie zdeadlockuje.
 
@@ -364,7 +364,7 @@ Jak można zobaczyć, pracownik nie zdeadlockował się mimo długiego czasu jed
 ---
 
 <details>
-<summary> **3. Test3:Ewakuacja przy przepełnionej kolejce komunikatów** </summary>
+<summary> <strong>3. Test3:Ewakuacja przy przepełnionej kolejce komunikatów</strong> </summary>
 
 Opis testu: Test polega na specjalnym wywołaniu przepełnienia w kolejce komunikatów przez ustawienie bardzo dużej liczby na semaforze chroniącym do niej dostęp. Po zawieszeniu się symulacji (można to sprawdzić wpisując ipcs -q i zobaczyć czy kolejka ma 16368 bajtów) wysyła się sygnał 3 od kierownika i powinna nastąpić poprawna ewakuacja.
 
@@ -435,7 +435,7 @@ Jak widać z logów, przed sygnałem kierownika nastąpił deadlock, a symulacja
 ---
 
 <details>
-<summary> **4.Test4:Poprawne liczenie + odporność na spam** </summary>
+<summary> <strong>4.Test4:Poprawne liczenie + odporność na spam</strong> </summary>
 
 Opis testu: Ten test ma za zadanie sprawdzić czy symulacja przy dużym obciążeniu i szybkości działania nadal poprawnie liczy przychód (czy nie są pomijane żadne wartości przez słabą synchronizację) i czy jest jednocześnie odporna na spam sygnałów 1 i 2 od kierownika. (po informacji o zakończeniu należy nacisnąć `ctrl+c` aby zobaczyć podsumowanie)
 
@@ -524,7 +524,7 @@ Jak widać symulacja nie zawiesiła się mimo dużego obciążenia i ciągłych 
 ---
 
 <details>
-<summary> **5.Test5:Ewakuacja w trakcie rezerwacji + usuwanie tłumów przed barem** </summary>
+<summary> <strong>5.Test5:Ewakuacja w trakcie rezerwacji + usuwanie tłumów przed barem</strong> </summary>
 
 Opis testu: Ten test sprawdza czy ewakuacja poprawnie przerwie rezerwację i doprowadzi do końca programu i dodatkowo sprawdzenie czy wątek sprzątający poprawnie i odpowiednio szybko usuwa procesy. W momencie kiedy logi staną z powodu jedzenia klientów (można chwilę odczekać aby main dokończył tworzenie 10k procesów klientów co można sprawdzić 1)`ctrl+z` 2)`ipcs -a`, a następnie `fg` i wtedy wysłać te 2 sygnały) należy wysłać sygnał 2 od kierownika, a następnie od razu sygnał 3. Program powinien przerwać rezerwację i poprawnie przeprowadzić ewakuację czyszcząc wszystko po sobie.
 
