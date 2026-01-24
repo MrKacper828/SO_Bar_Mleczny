@@ -4,6 +4,7 @@
 #define OPERACJE_H
 
 #include "struktury.h"
+#include <signal.h>
 
 key_t stworzKlucz(int klucz_struktury);
 //semafor
@@ -30,6 +31,8 @@ int polaczKolejke();
 
 //komunikaty
 void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania);
+bool wyslijKomunikatPrzerywalnie(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania,
+								const volatile sig_atomic_t* przerwij, const PamiecDzielona* pam);
 bool odbierzKomunikat(int kol_id, long mtyp, Komunikat* buf, bool czekaj);
 
 #endif

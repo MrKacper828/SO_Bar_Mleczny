@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <cstdio>
 #include <cstdlib>
+#include <unistd.h>
 
 //tworzenie poprawnych kluczy
 key_t stworzKlucz(int klucz_struktury) {
@@ -238,6 +239,39 @@ void wyslijKomunikat(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_sto
         }
         perror("Nieudana próba wysłania wiadomości(msgsnd)");
         break;
+    }
+}
+
+bool wyslijKomunikatPrzerywalnie(int kol_id, long mtyp, pid_t nadawca, int dane, int typ_stolika, int id_stolika, int id_dania,
+                                const volatile sig_atomic_t* przerwij, const PamiecDzielona* pam) {
+    Komunikat kom;
+    kom.mtype = mtyp;
+    kom.nadawca = nadawca;
+    kom.dane = dane;
+    kom.typ_stolika = typ_stolika;
+    kom.id_stolika = id_stolika;
+    kom.id_dania = id_dania;
+
+    while (true) {
+        if ((przerwij != nullptr && *przerwij) || (pam != nullptr && pam->pozar)) {
+            return false;
+        }
+
+        if (msgsnd(kol_id, &kom, ROZMIAR_KOM, IPC_NOWAIT) == 0) {
+            return true;
+        }
+
+        if (errno == EINTR) {
+            continue;
+        }
+
+        if (errno == EAGAIN) {
+            usleep(2000);
+            continue;
+        }
+
+        perror("Nieudana próba wysłania wiadomości (msgsnd przerywalne)");
+        return false;
     }
 }
 
