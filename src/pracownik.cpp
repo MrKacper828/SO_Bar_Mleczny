@@ -164,10 +164,10 @@ int main() {
                                 break;
                             }
                             if (zamowienie.id_stolika == 200) {
-                                wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0);
+                                (void)wyslijKomunikatPrzerywalnie(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0, &flaga_pozar, pam);
                             }
                             else if (zamowienie.id_stolika < 100) {
-                                wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 1, zamowienie.typ_stolika, zamowienie.id_stolika, 0);
+                                (void)wyslijKomunikatPrzerywalnie(kol_id, zamowienie.nadawca, getpid(), 1, zamowienie.typ_stolika, zamowienie.id_stolika, 0, &flaga_pozar, pam);
                             }
                         }
                         usleep(50000);
@@ -181,6 +181,10 @@ int main() {
                     logger("Pracownik: Zakończono rezerwację (SIGUSR2)");
                 }
             }
+        }
+
+        if (flaga_pozar) {
+            continue;
         }
 
         //normalna obsługa klientów (odbiór naczyń i wydawanie posiłków)
@@ -213,13 +217,13 @@ int main() {
             if (!flaga_pozar) {
                 logger("Pracownik: Odbieram naczynia od " + std::to_string(zamowienie.nadawca));
             }
-            wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0);
+            (void)wyslijKomunikatPrzerywalnie(kol_id, zamowienie.nadawca, getpid(), 0, 0, 0, 0, &flaga_pozar, pam);
         }
         else if (kod_polecenia < 100) {
             if (!flaga_pozar) {
                 logger("Pracownik: Wydaję posiłek dla " + std::to_string(zamowienie.nadawca) + " (stolik " + std::to_string(kod_polecenia) + ")");
             }
-            wyslijKomunikat(kol_id, zamowienie.nadawca, getpid(), 1, zamowienie.typ_stolika, kod_polecenia, 0);
+            (void)wyslijKomunikatPrzerywalnie(kol_id, zamowienie.nadawca, getpid(), 1, zamowienie.typ_stolika, kod_polecenia, 0, &flaga_pozar, pam);
         }
     }
     odlaczPamiec(pam);
